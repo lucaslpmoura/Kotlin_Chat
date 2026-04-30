@@ -1,7 +1,7 @@
-package com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server
+package com.lucaslpmoura.kotlin_chat.server
 
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common.parseMessageFromClient
+import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.parseMessageFromClient
 import java.net.ServerSocket
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

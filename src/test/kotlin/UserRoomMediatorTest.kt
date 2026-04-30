@@ -1,6 +1,6 @@
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server.KotlinChatRoom
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server.KotlinChatUser
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server.UserRoomMediator
+import com.lucaslpmoura.kotlin_chat.server.KotlinChatRoom
+import com.lucaslpmoura.kotlin_chat.server.KotlinChatUser
+import com.lucaslpmoura.kotlin_chat.server.UserRoomMediator
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 

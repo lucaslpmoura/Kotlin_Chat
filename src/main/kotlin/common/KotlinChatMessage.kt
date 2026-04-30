@@ -1,6 +1,6 @@
-package com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common
+package com.lucaslpmoura.kotlin_chat.common
 
-import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
+import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 
 data class KotlinChatMessage(val origin: String, val type: Type, val data: String) {
     val timestamp = System.currentTimeMillis()

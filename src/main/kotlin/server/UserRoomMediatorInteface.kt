@@ -1,4 +1,4 @@
-package com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server
+package com.lucaslpmoura.kotlin_chat.server
 
 interface UserRoomMediatorInteface {
     public fun addRoom(room: KotlinChatRoom)
