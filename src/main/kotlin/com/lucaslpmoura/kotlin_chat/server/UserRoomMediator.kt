@@ -16,7 +16,8 @@ class UserRoomMediator : UserRoomMediatorInteface {
         if(room.numOfUsers >= room.MAX_USERS){
             throw Exception("Maximum number of users reached for room ${room.id}")
         }
-
+        userRoomMap[user] = room
+        roomUserMap[room]!!.add(user)
     }
 
     override fun removeUserFromRoom(

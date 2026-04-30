@@ -1,0 +1,18 @@
+#!/usr/bin/env kotlin
+
+plugins {
+    kotlin("jvm") version "2.2.0"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation("io.kotest:kotest-runner-junit5:6.1.0")
+    testImplementation("io.kotest:kotest-assertions-core:6.1.0")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
