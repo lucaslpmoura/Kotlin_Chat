@@ -1,6 +1,5 @@
 package com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server
 
-import kotlin.to
 
 class UserRoomMediator : UserRoomMediatorInteface {
     private val userRoomMap: MutableMap<KotlinChatUser, KotlinChatRoom?> = mutableMapOf<KotlinChatUser, KotlinChatRoom?>()
@@ -15,8 +14,12 @@ class UserRoomMediator : UserRoomMediatorInteface {
     }
 
     override fun removeRoom(room: KotlinChatRoom) {
-        if(!roomUserMap.containsKey(room)){
-            throw Exception("Room does not exist.")
+        checkIfRoomExists(room)
+
+        if(roomUserMap[room]!!.isNotEmpty()){
+            for(user in roomUserMap[room]!!){
+                userRoomMap[user] = null
+            }
         }
         roomUserMap.remove(room)
     }
@@ -29,8 +32,10 @@ class UserRoomMediator : UserRoomMediatorInteface {
     }
 
     override fun removeUser(user: KotlinChatUser) {
-        if(!userRoomMap.containsKey(user)){
-            throw Exception("User is not on server.")
+        checkIfUserExists(user)
+
+        if(userRoomMap[user] != null){
+            roomUserMap[userRoomMap[user]]?.remove(user)
         }
         userRoomMap.remove(user)
     }
@@ -63,13 +68,33 @@ class UserRoomMediator : UserRoomMediatorInteface {
         room.numOfUsers--
     }
 
-    private fun checkIfUserAndRoomExists(user: KotlinChatUser, room: KotlinChatRoom) {
+    override fun getUserRoom(user: KotlinChatUser): KotlinChatRoom? {
+        checkIfUserExists(user)
+        return userRoomMap[user]
+    }
+
+    override fun getRoomUsers(room: KotlinChatRoom): Set<KotlinChatUser> {
+        checkIfRoomExists(room)
+        return roomUserMap[room]!!.toSet()
+    }
+
+
+    private fun checkIfRoomExists(room: KotlinChatRoom) {
         if(!roomUserMap.containsKey(room)){
             throw Exception("Room ${room.id} does not exist.")
         }
+    }
+
+    private fun checkIfUserExists(user: KotlinChatUser) {
         if(!userRoomMap.containsKey(user)){
             throw Exception("User ${user.id} is not on server.")
         }
+
     }
+    private fun checkIfUserAndRoomExists(user: KotlinChatUser, room: KotlinChatRoom) {
+        checkIfRoomExists(room)
+        checkIfUserExists(user)
+    }
+
 }
 

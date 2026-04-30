@@ -7,4 +7,6 @@ interface UserRoomMediatorInteface {
     public fun removeUser(user: KotlinChatUser)
     public fun addUserToRoom(user: KotlinChatUser, room: KotlinChatRoom)
     public fun removeUserFromRoom(user: KotlinChatUser, room: KotlinChatRoom)
+    public fun getUserRoom(user: KotlinChatUser): KotlinChatRoom?
+    public fun getRoomUsers(room: KotlinChatRoom): Set<KotlinChatUser>
 }

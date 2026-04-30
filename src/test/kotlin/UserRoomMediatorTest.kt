@@ -110,4 +110,34 @@ class UserRoomMediatorTest : FunSpec({
       }
     }
   }
+
+  context("Checking user data") {
+    val user = KotlinChatUser("1", "User 1", mediator)
+    val room = KotlinChatRoom("1", "Test Room", mediator, 3)
+
+    shouldNotThrowAny {
+      mediator.addUser(user)
+      mediator.addRoom(room)
+      mediator.addUserToRoom(user, room)
+    }
+
+    mediator.getUserRoom(user) shouldBe room
+
+  }
+
+  context("Checking room data") {
+    val user1 = KotlinChatUser("1", "User 1", mediator)
+    var user2 = KotlinChatUser("2", "User 2", mediator)
+    val room = KotlinChatRoom("1", "Test Room", mediator, 3)
+
+    shouldNotThrowAny {
+      mediator.addUser(user1)
+      mediator.addUser(user2)
+      mediator.addRoom(room)
+      mediator.addUserToRoom(user1, room)
+      mediator.addUserToRoom(user2, room)
+    }
+
+    mediator.getRoomUsers(room) shouldBe setOf(user1, user2)
+  }
 })
