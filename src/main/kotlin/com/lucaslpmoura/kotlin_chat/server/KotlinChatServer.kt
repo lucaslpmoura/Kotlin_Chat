@@ -13,7 +13,7 @@ class KotlinChatServer {
 
     private fun processMessage(message: KotlinChatMessage) {
         when (message.type) {
-            KotlinChatMessage.Type.CONNECT -> TODO()
+            KotlinChatMessage.Type.CONNECT -> connectClient(message)
             KotlinChatMessage.Type.DISCONNECT -> TODO()
             KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> TODO()
@@ -26,6 +26,14 @@ class KotlinChatServer {
                 return
             }
         }
+    }
+
+    private fun connectClient(message: KotlinChatMessage) {
+
+    }
+
+    private fun disconnectClient(message: KotlinChatMessage) {
+
     }
 
 
