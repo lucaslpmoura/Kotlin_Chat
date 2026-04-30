@@ -1,8 +1,10 @@
 package com.lucaslpmoura.kotlin_chat.server
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.parseMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.parseMessageFromClient
 import java.net.ServerSocket
+import java.net.Socket
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -11,6 +13,9 @@ class KotlinChatServer {
     val port : Int = 7960
     val socket : ServerSocket = ServerSocket()
 
+    val USER_NAME_BUFFER_SIZE : Int = 32
+    val ROOM_NAME_BUFFER_SIZE : Int = 64
+
     val MAX_ROOMS : Int = 3
     // Later use -> var numOfRooms: Int = 0
     val MAX_USERS : Int = 3
@@ -18,10 +23,31 @@ class KotlinChatServer {
 
     val mediator: UserRoomMediatorInteface = UserRoomMediator()
 
+    private fun estabilishConnection() {
+        try{
+            val clientSocket : Socket = socket.accept()
+            val newUser = KotlinChatUser(
+                id = generateUUID(),
+                name = "CONNECTING_USER",
+                socket = clientSocket,
+                mediator = mediator,
+            )
+            try{
+                newUser.name = readUserName(newUser)
+                addUser(newUser)
+                sendMessage(KotlinChatMessage.Type.CONNECT, newUser)
+            }catch (e: Exception){
+                println("Failed to add user: ${e.message}")
+                sendMessage(KotlinChatMessage.Type.ERROR, newUser, "Could not connect to server.")
+            }
+
+        }catch(e: Exception) {
+            println("Failed to connect user: ${e.message}")
+        }
+    }
 
     public fun processMessage(message: KotlinChatMessage) {
         when (message.type) {
-            KotlinChatMessage.Type.CONNECT -> connectUser(message)
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
             KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> TODO()
@@ -36,28 +62,6 @@ class KotlinChatServer {
         }
     }
 
-
-    private fun connectUser(message: KotlinChatMessage) {
-        try{
-            val newUser: KotlinChatUser = KotlinChatUser(
-                generateUUID(),
-                message.origin,
-                parseMessageFromClient(message)["name"]!!,
-                mediator,
-                )
-            try{
-                addUser(newUser)
-                sendMessage(KotlinChatMessage.Type.CONNECT, newUser)
-            }catch(e: Exception){
-                println("Failed to connect user: ${e.message}")
-                sendMessage(KotlinChatMessage.Type.ERROR, newUser, "Failed to connect.")
-            }
-        }catch(e: Exception){
-            println("Failed to create user: ${e.message}")
-            sendMessage(KotlinChatMessage.Type.ERROR, message.origin, "Could not parse user's name.")
-        }
-    }
-
     private fun disconnectClient(message: KotlinChatMessage) {
         try{
             val userId = parseMessageFromClient(message)["id"]!!
@@ -69,7 +73,7 @@ class KotlinChatServer {
             }
         }catch(e: Exception){
             println("Failed to disconnect user: ${e.message}")
-            sendMessage(KotlinChatMessage.Type.ERROR, message.origin, "Could not disconnect user.")
+
         }
     }
 
@@ -90,16 +94,27 @@ class KotlinChatServer {
     }
 
     private fun sendMessage(type: KotlinChatMessage.Type, user: KotlinChatUser, data: String = "") {
-        sendMessage(type, user.address, data)
+
     }
-    private fun sendMessage(type: KotlinChatMessage.Type, address: String, data: String = ""){}
+
+    private fun readUserName(user: KotlinChatUser): String {
+        val buffer = ByteArray(USER_NAME_BUFFER_SIZE)
+
+        val bytesRead = user.input?.read(buffer) ?: return ""
+
+        val messageFromBytes = parseMessageFromBytes(user.address, buffer, bytesRead)
+
+        try{
+            return parseMessageFromClient(messageFromBytes)["name"] ?: throw Exception("Could not read user's name!")
+        }catch(e: Exception){
+            throw Exception("Failed to read user name: ${e.message}")
+        }
+
+    }
 
 
     @OptIn(ExperimentalUuidApi::class)
     private fun generateUUID() : String{
         return Uuid.random().toString()
     }
-
-
-
 }

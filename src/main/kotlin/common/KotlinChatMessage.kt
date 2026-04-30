@@ -32,6 +32,47 @@ fun parseMessageFromClient(message : KotlinChatMessage) : Map<String, String>{
     }
 }
 
+fun parseMessageFromBytes(origin : String, bytes : ByteArray, bytesRead : Int) : KotlinChatMessage{
+    lateinit var type : Type
+    lateinit var data : String
+
+    var i = 0
+    var byte = bytes[i]
+    var outArray : MutableList<Byte> = mutableListOf<Byte>()
+
+    // Reads until the first '|' to get the message type
+    while(byte != '|'.code.toByte()){
+        outArray.add(byte)
+        i++
+        byte = bytes[i]
+        println(i)
+    }
+    val typeName = outArray.toByteArray().toString(Charsets.UTF_8)
+    type = when(typeName) {
+        "CONNECT" -> Type.CONNECT
+        "DISCONNECT" -> Type.DISCONNECT
+        "AFK" -> Type.AFK
+        "LIST_ROOM" -> Type.LIST_ROOMS
+        "JOIN_ROOM" -> Type.JOIN_ROOM
+        "LEAVE_ROOM" -> Type.LEAVE_ROOM
+        "TEXT" -> Type.TEXT
+        "ERROR" -> Type.ERROR
+        else -> throw Exception("Invalid message type.")
+    }
+
+
+    outArray.clear()
+    // The rest of the array, starting from index where the type ends, is the message data.
+    outArray = bytes.slice(i+1 until bytesRead).toMutableList<Byte>()
+    data = outArray.toByteArray().toString(Charsets.UTF_8)
+
+    return KotlinChatMessage(origin, type, data)
+
+
+
+
+}
+
 /*
 Message Types and Server Returns
 
@@ -53,7 +94,9 @@ The messages will be shown in pairs, as follows:
 
 CONNECT
 
-Client  -> CONNECT | USERNAME | -> Server
+Client -> TCP_HANDSHAKE
+Server -> TCP_HANDSHAKE
+Client  -> CONNECT | USERNAME |
 Server -> CONNECT | USER_ID
 
 DISCONNECT
