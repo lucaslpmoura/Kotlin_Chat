@@ -3,7 +3,6 @@ import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server.KotlinCh
 import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.server.UserRoomMediator
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.assertions.throwables.shouldThrowAny
 
 
 import io.kotest.core.spec.style.FunSpec
@@ -59,7 +58,7 @@ class UserRoomMediatorTest : FunSpec({
   context("User management") {
 
     test("should add a user successfully") {
-      val user = KotlinChatUser("1", "Test User", mediator)
+      val user = KotlinChatUser("1", "Test User", "localaddress", mediator)
 
       shouldNotThrowAny {
         mediator.addUser(user)
@@ -67,7 +66,7 @@ class UserRoomMediatorTest : FunSpec({
     }
 
     test("should not allow adding the same user twice") {
-      val user = KotlinChatUser("1", "Test User", mediator)
+      val user = KotlinChatUser("1", "Test User", "localaddress", mediator)
 
       mediator.addUser(user)
 
@@ -77,7 +76,7 @@ class UserRoomMediatorTest : FunSpec({
     }
 
     test("should remove an existing user") {
-      val user = KotlinChatUser("1", "Test User", mediator)
+      val user = KotlinChatUser("1", "Test User", "localaddress", mediator)
 
       mediator.addUser(user)
 
@@ -87,7 +86,7 @@ class UserRoomMediatorTest : FunSpec({
     }
 
     test("should not remove a user that does not exist") {
-      val user = KotlinChatUser("1", "Test User", mediator)
+      val user = KotlinChatUser("1", "Test User", "localaddress", mediator)
 
       shouldThrow<Exception> {
         mediator.removeUser(user)
@@ -99,11 +98,11 @@ class UserRoomMediatorTest : FunSpec({
 
     test("should add multiple users successfully") {
       val users = listOf(
-        KotlinChatUser("1", "User 1", mediator),
-        KotlinChatUser("2", "User 2", mediator),
-        KotlinChatUser("3", "User 3", mediator),
-        KotlinChatUser("4", "User 4", mediator),
-        KotlinChatUser("5", "User 5", mediator)
+        KotlinChatUser("1", "User 1", "localaddress", mediator),
+        KotlinChatUser("2", "User 2", "localaddress", mediator),
+        KotlinChatUser("3", "User 3", "localaddress", mediator),
+        KotlinChatUser("4", "User 4", "localaddress", mediator),
+        KotlinChatUser("5", "User 5", "localaddress", mediator)
       )
       shouldNotThrowAny {
         users.forEach { mediator.addUser(it) }
@@ -112,7 +111,7 @@ class UserRoomMediatorTest : FunSpec({
   }
 
   context("Checking user data") {
-    val user = KotlinChatUser("1", "User 1", mediator)
+    val user = KotlinChatUser("1", "User 1", "localaddress", mediator)
     val room = KotlinChatRoom("1", "Test Room", mediator, 3)
 
     shouldNotThrowAny {
@@ -126,8 +125,8 @@ class UserRoomMediatorTest : FunSpec({
   }
 
   context("Checking room data") {
-    val user1 = KotlinChatUser("1", "User 1", mediator)
-    var user2 = KotlinChatUser("2", "User 2", mediator)
+    val user1 = KotlinChatUser("1", "User 1", "localaddress", mediator)
+    var user2 = KotlinChatUser("2", "User 2", "localaddress", mediator)
     val room = KotlinChatRoom("1", "Test Room", mediator, 3)
 
     shouldNotThrowAny {
