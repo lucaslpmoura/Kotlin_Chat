@@ -88,6 +88,28 @@ class UserRoomMediator : UserRoomMediatorInteface {
         return roomUserMap.size
     }
 
+    override fun isUserConnected(user: KotlinChatUser) : Boolean{
+        return userRoomMap.containsKey(user)
+    }
+
+    override fun getUserById(id: String): KotlinChatUser {
+        for (user in userRoomMap.keys){
+            if(user.id == id){
+                return user
+            }
+        }
+        throw Exception("No user with id $id exists.")
+    }
+
+    override fun getRoomById(id: String): KotlinChatRoom {
+        for (room in roomUserMap.keys){
+            if(room.id == id){
+                return room
+            }
+        }
+        throw Exception("No room with id $id exists.")
+    }
+
 
     private fun checkIfRoomExists(room: KotlinChatRoom) {
         if(!roomUserMap.containsKey(room)){

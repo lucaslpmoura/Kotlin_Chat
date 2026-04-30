@@ -20,6 +20,12 @@ fun parseMessageFromClient(message : KotlinChatMessage) : Map<String, String>{
             }
             mapOf("name" to message.data)
         }
+        Type.DISCONNECT -> {
+            if(message.data.isEmpty()){
+                throw Exception("id not present.")
+            }
+            mapOf("id" to message.data)
+        }
         else -> {
             mapOf<String, String>("content" to "")
         }

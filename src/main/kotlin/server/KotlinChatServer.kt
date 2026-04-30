@@ -19,7 +19,7 @@ class KotlinChatServer {
     val mediator: UserRoomMediatorInteface = UserRoomMediator()
 
 
-    private fun processMessage(message: KotlinChatMessage) {
+    public fun processMessage(message: KotlinChatMessage) {
         when (message.type) {
             KotlinChatMessage.Type.CONNECT -> connectUser(message)
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
@@ -42,9 +42,8 @@ class KotlinChatServer {
             val newUser: KotlinChatUser = KotlinChatUser(
                 generateUUID(),
                 message.origin,
-                parseMessageFromClient(message)["username"]!!,
+                parseMessageFromClient(message)["name"]!!,
                 mediator,
-
                 )
             try{
                 addUser(newUser)
@@ -54,13 +53,24 @@ class KotlinChatServer {
                 sendMessage(KotlinChatMessage.Type.ERROR, newUser, "Failed to connect.")
             }
         }catch(e: Exception){
-            sendMessage(KotlinChatMessage.Type.ERROR, message.origin, "Could not parse user's name.")
             println("Failed to create user: ${e.message}")
+            sendMessage(KotlinChatMessage.Type.ERROR, message.origin, "Could not parse user's name.")
         }
     }
 
     private fun disconnectClient(message: KotlinChatMessage) {
-
+        try{
+            val userId = parseMessageFromClient(message)["id"]!!
+            val user = mediator.getUserById(userId)
+            if(message.origin == "SERVER" || message.origin == user.address){
+                removeUser(user)
+            }else{
+                throw Exception("You don't have permission do disconnect users.")
+            }
+        }catch(e: Exception){
+            println("Failed to disconnect user: ${e.message}")
+            sendMessage(KotlinChatMessage.Type.ERROR, message.origin, "Could not disconnect user.")
+        }
     }
 
     private fun addUser(user: KotlinChatUser) {
@@ -68,6 +78,14 @@ class KotlinChatServer {
             mediator.addUser(user)
         }else{
             throw Exception("Cannot add user ${user.id} -- server is full.")
+        }
+    }
+
+    private fun removeUser(user: KotlinChatUser) {
+        if(mediator.isUserConnected(user)){
+            mediator.removeUser(user)
+        }else{
+            throw Exception("Cannot remove user ${user.id} -- user is not on server.")
         }
     }
 
