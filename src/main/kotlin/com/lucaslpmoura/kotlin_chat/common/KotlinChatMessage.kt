@@ -1,10 +1,28 @@
 package com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common
 
+import com.lucaslpmoura.kotlin_chat.com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
+
 data class KotlinChatMessage(val origin: String, val type: Type, val data: String) {
     val timestamp = System.currentTimeMillis()
 
     enum class Type {
         CONNECT, DISCONNECT, AFK, LIST_ROOMS, JOIN_ROOM, LEAVE_ROOM, TEXT, ERROR
+    }
+
+
+}
+
+fun parseMessageFromClient(message : KotlinChatMessage) : Map<String, String>{
+    return when(message.type) {
+        Type.CONNECT -> {
+            if(message.data.isEmpty()){
+                throw Exception("name not present.")
+            }
+            mapOf("name" to message.data)
+        }
+        else -> {
+            mapOf<String, String>("content" to "")
+        }
     }
 }
 
