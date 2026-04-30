@@ -78,6 +78,14 @@ class UserRoomMediator : UserRoomMediatorInteface {
         return roomUserMap[room]!!.toSet()
     }
 
+    override fun getNumOfUsers(): Int {
+        return userRoomMap.size
+    }
+
+    override fun getNumOfRooms(): Int {
+        return roomUserMap.size
+    }
+
 
     private fun checkIfRoomExists(room: KotlinChatRoom) {
         if(!roomUserMap.containsKey(room)){
