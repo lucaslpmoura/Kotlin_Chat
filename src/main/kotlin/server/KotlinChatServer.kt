@@ -1,6 +1,7 @@
 package com.lucaslpmoura.kotlin_chat.server
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
 import com.lucaslpmoura.kotlin_chat.common.USER_NAME_BUFFER_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.parseDataFromClientMessage
@@ -25,19 +26,27 @@ class KotlinChatServer {
     val MAX_USERS : Int = 3
     var numOfUsers: Int = 0
 
+
     val mediator: UserRoomMediatorInteface = UserRoomMediator()
 
-    public suspend fun run(){
-        coroutineScope {
+    private val initialConnectionScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val readScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val userJobs : MutableMap<String, Job> = mutableMapOf<String, Job>()
+
+    public fun run(){
+        initialConnectionScope.launch {
             launch {
                 while(true){
                     establishConnection()
                 }
             }
         }
+
+
     }
 
-    private suspend fun establishConnection() {
+    private fun establishConnection() {
         println("Accepting TCP connections...")
 
         try{
@@ -54,9 +63,9 @@ class KotlinChatServer {
             try{
                 newUser.name = readUserName(newUser)
                 addUser(newUser)
-
                 println("User ${newUser.id} connected as ${newUser.name}.")
-                sendMessage(newUser, KotlinChatMessage.Type.CONNECT, )
+
+                sendMessage(newUser, KotlinChatMessage.Type.CONNECT)
             }catch (e: Exception){
                 println("Failed to add user: ${e.message}")
                 sendMessage(newUser,KotlinChatMessage.Type.ERROR, "Could not connect to server.")
@@ -101,6 +110,7 @@ class KotlinChatServer {
     private fun addUser(user: KotlinChatUser) {
         if(mediator.getNumOfUsers() < MAX_USERS) {
             mediator.addUser(user)
+            createUserJob(user)
         }else{
             throw Exception("Cannot add user ${user.id} -- server is full.")
         }
@@ -109,6 +119,7 @@ class KotlinChatServer {
     private fun removeUser(user: KotlinChatUser) {
         if(mediator.isUserConnected(user)){
             mediator.removeUser(user)
+            deleteUserJob(user)
         }else{
             throw Exception("Cannot remove user ${user.id} -- user is not on server.")
         }
@@ -123,7 +134,22 @@ class KotlinChatServer {
         }catch(e: Exception){
             println("Failed to send ${type.name} message to user ${user.id}: ${e.message}")
         }
+    }
 
+    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
+        val origin = "SERVER"
+        lateinit var data: String
+        when(type) {
+            KotlinChatMessage.Type.CONNECT -> data = user.id
+            KotlinChatMessage.Type.DISCONNECT -> TODO()
+            KotlinChatMessage.Type.AFK -> TODO()
+            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
+            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.TEXT -> TODO()
+            KotlinChatMessage.Type.ERROR -> TODO()
+        }
+        return KotlinChatMessage(origin, type, data)
     }
 
     private fun readUserName(user: KotlinChatUser): String {
@@ -142,23 +168,41 @@ class KotlinChatServer {
         }
     }
 
+    private fun createUserJob(user: KotlinChatUser) {
+        val userJob = readScope.launch {
+            println("Creating job for user ${user.id}.")
+            var readError = false
+            while(!readError) {
+                try{
+                    val buffer = ByteArray(MAX_MESSAGE_SIZE)
+                    val bytesRead = user.input?.read(buffer) ?: throw Exception("Failed to read input from user ${user.id}.")
+                    if (bytesRead == -1) throw Exception("Failed to read input from user ${user.id} -- input length is 0.")
+                    val message = getMessageFromBytes(user.address, buffer)
+                    processMessage(message)
+                }catch(e: Exception){
+                    println("Failed to read input from user ${user.id}: ${e.message} ")
+                    readError = true
+                    deleteUserJob(user)
+                }
+            }
 
-    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
-        val origin = "SERVER"
-        lateinit var data: String
-        when(type) {
-            KotlinChatMessage.Type.CONNECT -> data = user.id
-            KotlinChatMessage.Type.DISCONNECT -> TODO()
-            KotlinChatMessage.Type.AFK -> TODO()
-            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
-            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
-            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
-            KotlinChatMessage.Type.TEXT -> TODO()
-            KotlinChatMessage.Type.ERROR -> TODO()
+
         }
-
-        return KotlinChatMessage(origin, type, data)
+        userJobs[user.id] = userJob
     }
+
+    private fun deleteUserJob(user: KotlinChatUser) {
+        for(id in userJobs.keys){
+            if(id == user.id){
+                userJobs[id]?.cancel()
+                userJobs.remove(id)
+                println("Stopping job for user ${user.id}.")
+            }
+        }
+    }
+
+
+
 
     @OptIn(ExperimentalUuidApi::class)
     private fun generateUUID() : String{

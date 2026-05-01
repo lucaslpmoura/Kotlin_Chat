@@ -8,11 +8,12 @@ import com.lucaslpmoura.kotlin_chat.common.toByteArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.Socket
+import java.nio.charset.Charset
 import kotlin.time.Duration.Companion.milliseconds
 
 class KotlinChatClient {
@@ -61,10 +62,19 @@ class KotlinChatClient {
         }
     }
 
-    public fun sendConnectMessage(name : String) {
+    public fun connect(name : String) {
         if(!isTCPConnected) throw IOException("Socket is not connected.")
         val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.CONNECT, name)
         socket.outputStream.write(message.toByteArray())
+    }
+
+    public suspend fun disconnect(disconnectId : String = id!!) {
+        if(!isTCPConnected) throw IOException("Socket is not connected.")
+        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.DISCONNECT, disconnectId ?: throw IOException("Id is not set."))
+        println(message.toByteArray().toString(Charsets.UTF_8))
+        socket.outputStream.write(message.toByteArray())
+        delay(100.milliseconds)
+        processDisconnect()
     }
 
     private fun readMessage() : KotlinChatMessage {
@@ -81,23 +91,37 @@ class KotlinChatClient {
     private fun processMessage(message: KotlinChatMessage) {
         when(message.type) {
             KotlinChatMessage.Type.CONNECT -> {
-                processConnectMessage(message)
+                processConnect(message)
+            }
+            KotlinChatMessage.Type.DISCONNECT -> {
+                processDisconnect()
             }
             else -> TODO()
         }
 
-        if(id != null){
-            isConnected = true
-            println("Connected to chat with id $id")
+
+    }
+
+    private fun processConnect(message: KotlinChatMessage) {
+        try{
+            val givenId = parseDataFromServerMessage(message)["id"]
+            id = givenId
+            if(id != null){
+                isConnected = true
+                println("Connected to chat with id $id")
+            }
+        }catch (e: Exception){
+            println("Error parsing CONNECT message: ${e.message}")
         }
     }
 
-    private fun processConnectMessage(message: KotlinChatMessage) {
-        try{
-            val id = parseDataFromServerMessage(message)["id"]
-            this.id = id
-        }catch (e: Exception){
-            println("Error parsing CONNECT message: ${e.message}")
+    private fun processDisconnect() {
+        tcpConnectionScope.cancel()
+        readScope.cancel()
+        isConnected = false
+        isTCPConnected = false
+        if(!isTCPConnected) {
+            println("Disconnected from server.")
         }
     }
 

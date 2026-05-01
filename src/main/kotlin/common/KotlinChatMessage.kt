@@ -63,7 +63,7 @@ fun getMessageFromBytes(origin : String, bytes : ByteArray) : KotlinChatMessage{
 
 
     val typeName = outArray.toByteArray().toString(Charsets.UTF_8)
-    println(typeName)
+
     type = resolveTypeFromString(typeName) ?: throw Exception("Invalid message type.")
     outArray.clear()
 

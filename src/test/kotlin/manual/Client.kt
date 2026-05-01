@@ -10,7 +10,9 @@ suspend fun main() {
     val client : KotlinChatClient = KotlinChatClient()
     client.run()
     delay(2.seconds)
-    client.sendConnectMessage("LUCAS")
+    client.connect("LUCAS")
+    delay(2.seconds)
+    client.disconnect()
 
 
 }
