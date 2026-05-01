@@ -1,8 +1,9 @@
 package com.lucaslpmoura.kotlin_chat.server
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
-import com.lucaslpmoura.kotlin_chat.common.parseMessageFromBytes
-import com.lucaslpmoura.kotlin_chat.common.parseMessageFromClient
+import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
+import com.lucaslpmoura.kotlin_chat.common.parseDataFromClientMessage
+import com.lucaslpmoura.kotlin_chat.common.toByteArray
 import java.net.ServerSocket
 import java.net.Socket
 import kotlin.uuid.ExperimentalUuidApi
@@ -11,7 +12,7 @@ import kotlin.uuid.Uuid
 class KotlinChatServer {
 
     val port : Int = 7960
-    val socket : ServerSocket = ServerSocket()
+    val socket : ServerSocket = ServerSocket(port)
 
     val USER_NAME_BUFFER_SIZE : Int = 32
     val ROOM_NAME_BUFFER_SIZE : Int = 64
@@ -23,7 +24,13 @@ class KotlinChatServer {
 
     val mediator: UserRoomMediatorInteface = UserRoomMediator()
 
-    private fun estabilishConnection() {
+    public fun run(){
+        establishConnection()
+    }
+
+    private fun establishConnection() {
+        println("Accepting TCP connections...")
+
         try{
             val clientSocket : Socket = socket.accept()
             val newUser = KotlinChatUser(
@@ -32,13 +39,18 @@ class KotlinChatServer {
                 socket = clientSocket,
                 mediator = mediator,
             )
+
+            println("Client at ${newUser.address} is connecting with id ${newUser.id}.")
+
             try{
                 newUser.name = readUserName(newUser)
                 addUser(newUser)
-                sendMessage(KotlinChatMessage.Type.CONNECT, newUser)
+
+                println("User ${newUser.id} connected as ${newUser.name}.")
+                sendMessage(newUser, KotlinChatMessage.Type.CONNECT, )
             }catch (e: Exception){
                 println("Failed to add user: ${e.message}")
-                sendMessage(KotlinChatMessage.Type.ERROR, newUser, "Could not connect to server.")
+                sendMessage(newUser,KotlinChatMessage.Type.ERROR, "Could not connect to server.")
             }
 
         }catch(e: Exception) {
@@ -64,7 +76,7 @@ class KotlinChatServer {
 
     private fun disconnectClient(message: KotlinChatMessage) {
         try{
-            val userId = parseMessageFromClient(message)["id"]!!
+            val userId = parseDataFromClientMessage(message)["id"]!!
             val user = mediator.getUserById(userId)
             if(message.origin == "SERVER" || message.origin == user.address){
                 removeUser(user)
@@ -93,25 +105,51 @@ class KotlinChatServer {
         }
     }
 
-    private fun sendMessage(type: KotlinChatMessage.Type, user: KotlinChatUser, data: String = "") {
+    private fun sendMessage(user: KotlinChatUser, type: KotlinChatMessage.Type,  data: String = "") {
+        println("Sending message of type ${type.name} to user ${user.id}")
 
-    }
-
-    private fun readUserName(user: KotlinChatUser): String {
-        val buffer = ByteArray(USER_NAME_BUFFER_SIZE)
-
-        val bytesRead = user.input?.read(buffer) ?: return ""
-
-        val messageFromBytes = parseMessageFromBytes(user.address, buffer, bytesRead)
-
+        val message = constructMessage(user, type, data)
         try{
-            return parseMessageFromClient(messageFromBytes)["name"] ?: throw Exception("Could not read user's name!")
+            user.output?.write(message.toByteArray())
         }catch(e: Exception){
-            throw Exception("Failed to read user name: ${e.message}")
+            println("Failed to send ${type.name} message to user ${user.id}: ${e.message}")
         }
 
     }
 
+    private fun readUserName(user: KotlinChatUser): String {
+        try{
+            val buffer = ByteArray("CONNECT|".length + USER_NAME_BUFFER_SIZE)
+
+            val bytesRead = user.input?.read(buffer) ?: throw Exception("Failed to read input from user ${user.id}.")
+
+            if (bytesRead == -1) throw Exception("Failed to read input from user ${user.id} -- input length is 0.")
+
+            val messageFromBytes = getMessageFromBytes(user.address, buffer)
+
+            return parseDataFromClientMessage(messageFromBytes)["name"] ?: throw Exception("Could not read user's name!")
+        }catch(e: Exception){
+            throw Exception("Failed to read user name: ${e.message}")
+        }
+    }
+
+
+    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
+        val origin = "SERVER"
+        lateinit var data: String
+        when(type) {
+            KotlinChatMessage.Type.CONNECT -> data = user.id
+            KotlinChatMessage.Type.DISCONNECT -> TODO()
+            KotlinChatMessage.Type.AFK -> TODO()
+            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
+            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.TEXT -> TODO()
+            KotlinChatMessage.Type.ERROR -> TODO()
+        }
+
+        return KotlinChatMessage(origin, type, data)
+    }
 
     @OptIn(ExperimentalUuidApi::class)
     private fun generateUUID() : String{

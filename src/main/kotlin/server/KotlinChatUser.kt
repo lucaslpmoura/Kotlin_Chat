@@ -9,21 +9,8 @@ class KotlinChatUser(id: String, name: String, val socket: Socket,  mediator: Us
     : KotlinChatComponent(id, name, mediator)
 {
     val address : String = socket.inetAddress?.toString() ?: ""
-    var input : InputStream? = null
-    var output : OutputStream? = null
-
-
-    init {
-        try{
-            input  = socket.getInputStream()
-            output = socket.getOutputStream()
-        }catch (e: IOException){
-            println("Failed get I/O streams for user $id")
-            e.printStackTrace()
-        }
-    }
-
-
+    var input : InputStream? = socket.getInputStream()
+    var output : OutputStream? = socket.getOutputStream()
 
 
 }

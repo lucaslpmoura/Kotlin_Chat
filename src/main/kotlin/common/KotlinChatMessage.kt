@@ -12,7 +12,7 @@ data class KotlinChatMessage(val origin: String, val type: Type, val data: Strin
 
 }
 
-fun parseMessageFromClient(message : KotlinChatMessage) : Map<String, String>{
+fun parseDataFromClientMessage(message : KotlinChatMessage) : Map<String, String>{
     return when(message.type) {
         Type.CONNECT -> {
             if(message.data.isEmpty()){
@@ -32,7 +32,7 @@ fun parseMessageFromClient(message : KotlinChatMessage) : Map<String, String>{
     }
 }
 
-fun parseMessageFromBytes(origin : String, bytes : ByteArray, bytesRead : Int) : KotlinChatMessage{
+fun getMessageFromBytes(origin : String, bytes : ByteArray) : KotlinChatMessage{
     lateinit var type : Type
     lateinit var data : String
 
@@ -45,10 +45,39 @@ fun parseMessageFromBytes(origin : String, bytes : ByteArray, bytesRead : Int) :
         outArray.add(byte)
         i++
         byte = bytes[i]
-        println(i)
     }
+
+
     val typeName = outArray.toByteArray().toString(Charsets.UTF_8)
-    type = when(typeName) {
+    println(typeName)
+    type = resolveTypeFromString(typeName) ?: throw Exception("Invalid message type.")
+    outArray.clear()
+
+
+    // The rest of the array, starting from index where the type ends plus one, is the message data.
+
+    i++ // Skips the first '|'
+    byte = bytes[i]
+    while(byte != 0.toByte()){
+        outArray.add(byte)
+        i++
+        byte = bytes[i]
+    }
+    data = outArray.toByteArray().toString(Charsets.UTF_8)
+
+    return KotlinChatMessage(origin, type, data)
+}
+
+fun KotlinChatMessage.toByteArray() : ByteArray{
+    val type = this.type.name
+    val data = this.data
+    return "$type|$data".toByteArray()
+}
+
+
+
+fun resolveTypeFromString(string : String) : KotlinChatMessage.Type?{
+    return when(string) {
         "CONNECT" -> Type.CONNECT
         "DISCONNECT" -> Type.DISCONNECT
         "AFK" -> Type.AFK
@@ -57,20 +86,8 @@ fun parseMessageFromBytes(origin : String, bytes : ByteArray, bytesRead : Int) :
         "LEAVE_ROOM" -> Type.LEAVE_ROOM
         "TEXT" -> Type.TEXT
         "ERROR" -> Type.ERROR
-        else -> throw Exception("Invalid message type.")
+        else -> null
     }
-
-
-    outArray.clear()
-    // The rest of the array, starting from index where the type ends, is the message data.
-    outArray = bytes.slice(i+1 until bytesRead).toMutableList<Byte>()
-    data = outArray.toByteArray().toString(Charsets.UTF_8)
-
-    return KotlinChatMessage(origin, type, data)
-
-
-
-
 }
 
 /*
@@ -83,7 +100,7 @@ TYPE | DATA1 | DATA2 | DATA3 | ... | DATAn |
 where TYPE is a byte representation of the names of the available message types.
 DATAn is the byte representation for the data/metadata, for each type of message.
 
-The 0x10 byte is used as a separtor for each section. He will be represented by the ' | ' char.
+The '|' byte is used as a separtor for each section.
 
 If a message is processed successfully, the Server will return a message with the same type.
 Otherwise, the ERROR type will be sent.
