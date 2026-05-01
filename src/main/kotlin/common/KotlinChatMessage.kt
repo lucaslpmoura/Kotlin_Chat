@@ -32,6 +32,20 @@ fun parseDataFromClientMessage(message : KotlinChatMessage) : Map<String, String
     }
 }
 
+fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String>{
+    return when(message.type) {
+        Type.CONNECT -> {
+            if(message.data.isEmpty()){
+                throw Exception("id not present.")
+            }
+            mapOf("id" to message.data)
+        }
+        else -> {
+            mapOf<String, String>("content" to "")
+        }
+    }
+}
+
 fun getMessageFromBytes(origin : String, bytes : ByteArray) : KotlinChatMessage{
     lateinit var type : Type
     lateinit var data : String

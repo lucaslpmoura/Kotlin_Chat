@@ -2,7 +2,7 @@ package manual
 
 import com.lucaslpmoura.kotlin_chat.server.KotlinChatServer
 
-fun main(){
+suspend fun main(){
 
     val server = KotlinChatServer()
 

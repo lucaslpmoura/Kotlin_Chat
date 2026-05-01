@@ -1,11 +1,15 @@
 package com.lucaslpmoura.kotlin_chat.server
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.USER_NAME_BUFFER_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.parseDataFromClientMessage
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
+
 import java.net.ServerSocket
 import java.net.Socket
+
+import kotlinx.coroutines.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -14,8 +18,7 @@ class KotlinChatServer {
     val port : Int = 7960
     val socket : ServerSocket = ServerSocket(port)
 
-    val USER_NAME_BUFFER_SIZE : Int = 32
-    val ROOM_NAME_BUFFER_SIZE : Int = 64
+
 
     val MAX_ROOMS : Int = 3
     // Later use -> var numOfRooms: Int = 0
@@ -24,11 +27,17 @@ class KotlinChatServer {
 
     val mediator: UserRoomMediatorInteface = UserRoomMediator()
 
-    public fun run(){
-        establishConnection()
+    public suspend fun run(){
+        coroutineScope {
+            launch {
+                while(true){
+                    establishConnection()
+                }
+            }
+        }
     }
 
-    private fun establishConnection() {
+    private suspend fun establishConnection() {
         println("Accepting TCP connections...")
 
         try{
