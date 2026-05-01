@@ -21,16 +21,20 @@ class KotlinChatClient {
     val serverAddress = "localhost"
     val serverPort = 7960
 
-    lateinit var socket : Socket
+    private lateinit var socket : Socket
 
     @Volatile
-    var isTCPConnected: Boolean = false
+    private var isTCPConnected: Boolean = false
 
     @Volatile
-    var isConnected : Boolean = false
+    private var isConnected : Boolean = false
 
     var name : String? = null
+        private set
     var id : String? = null
+        private set
+
+    var lastError : KotlinChatMessage? = null
 
     private val tcpConnectionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -130,6 +134,7 @@ class KotlinChatClient {
 
     private fun processError(message: KotlinChatMessage) {
         println("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
+        lastError = message
     }
 
 }

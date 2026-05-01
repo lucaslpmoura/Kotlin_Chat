@@ -19,5 +19,16 @@ suspend fun main() {
         delay(1000.milliseconds)
     }
 
+    var i = 0
+    while(i < 10){
+        for(client in clients){
+            if(client.lastError != null){
+                println("[${client.id}] -- ${client.lastError?.data}")
+            }
+        }
+        i++
+        delay(100.milliseconds)
+    }
+
 
 }
