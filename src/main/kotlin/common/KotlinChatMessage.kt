@@ -40,6 +40,9 @@ fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String
             }
             mapOf("id" to message.data)
         }
+        Type.ERROR -> {
+            mapOf("error" to message.data)
+        }
         else -> {
             mapOf<String, String>("content" to "")
         }

@@ -96,6 +96,9 @@ class KotlinChatClient {
             KotlinChatMessage.Type.DISCONNECT -> {
                 processDisconnect()
             }
+            KotlinChatMessage.Type.ERROR -> {
+                processError(message)
+            }
             else -> TODO()
         }
 
@@ -123,6 +126,10 @@ class KotlinChatClient {
         if(!isTCPConnected) {
             println("Disconnected from server.")
         }
+    }
+
+    private fun processError(message: KotlinChatMessage) {
+        println("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
     }
 
 }

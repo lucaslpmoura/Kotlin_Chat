@@ -11,6 +11,8 @@ import java.net.ServerSocket
 import java.net.Socket
 
 import kotlinx.coroutines.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -32,7 +34,9 @@ class KotlinChatServer {
     private val initialConnectionScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val readScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val userJobs : MutableMap<String, Job> = mutableMapOf<String, Job>()
+
+    @Volatile
+    private var userJobs : ConcurrentHashMap<String, Job> = ConcurrentHashMap<String, Job>()
 
     public fun run(){
         initialConnectionScope.launch {
@@ -76,7 +80,36 @@ class KotlinChatServer {
         }
     }
 
-    public fun processMessage(message: KotlinChatMessage) {
+    private fun sendMessage(user: KotlinChatUser, type: KotlinChatMessage.Type,  data: String = "") {
+        println("Sending message of type ${type.name} to user ${user.id}")
+
+        val message = constructMessage(user, type, data)
+        try{
+            user.output?.write(message.toByteArray())
+        }catch(e: Exception){
+            println("Failed to send ${type.name} message to user ${user.id}: ${e.message}")
+        }
+    }
+
+    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
+        val origin = "SERVER"
+        lateinit var messageData: String
+        when(type) {
+            KotlinChatMessage.Type.CONNECT -> messageData = user.id
+            KotlinChatMessage.Type.DISCONNECT -> messageData = ""
+            KotlinChatMessage.Type.AFK -> TODO()
+            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
+            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.TEXT -> TODO()
+
+            // ERROR
+            else -> {messageData = data}
+        }
+        return KotlinChatMessage(origin, type, messageData)
+    }
+
+    private fun processReceivedMessage(message: KotlinChatMessage) {
         when (message.type) {
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
             KotlinChatMessage.Type.AFK -> TODO()
@@ -120,36 +153,10 @@ class KotlinChatServer {
         if(mediator.isUserConnected(user)){
             mediator.removeUser(user)
             deleteUserJob(user)
+            println("Connected users: ${mediator.getNumOfUsers()}.")
         }else{
             throw Exception("Cannot remove user ${user.id} -- user is not on server.")
         }
-    }
-
-    private fun sendMessage(user: KotlinChatUser, type: KotlinChatMessage.Type,  data: String = "") {
-        println("Sending message of type ${type.name} to user ${user.id}")
-
-        val message = constructMessage(user, type, data)
-        try{
-            user.output?.write(message.toByteArray())
-        }catch(e: Exception){
-            println("Failed to send ${type.name} message to user ${user.id}: ${e.message}")
-        }
-    }
-
-    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
-        val origin = "SERVER"
-        lateinit var data: String
-        when(type) {
-            KotlinChatMessage.Type.CONNECT -> data = user.id
-            KotlinChatMessage.Type.DISCONNECT -> TODO()
-            KotlinChatMessage.Type.AFK -> TODO()
-            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
-            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
-            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
-            KotlinChatMessage.Type.TEXT -> TODO()
-            KotlinChatMessage.Type.ERROR -> TODO()
-        }
-        return KotlinChatMessage(origin, type, data)
     }
 
     private fun readUserName(user: KotlinChatUser): String {
@@ -178,7 +185,7 @@ class KotlinChatServer {
                     val bytesRead = user.input?.read(buffer) ?: throw Exception("Failed to read input from user ${user.id}.")
                     if (bytesRead == -1) throw Exception("Failed to read input from user ${user.id} -- input length is 0.")
                     val message = getMessageFromBytes(user.address, buffer)
-                    processMessage(message)
+                    processReceivedMessage(message)
                 }catch(e: Exception){
                     println("Failed to read input from user ${user.id}: ${e.message} ")
                     readError = true

@@ -7,12 +7,17 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 suspend fun main() {
-    val client : KotlinChatClient = KotlinChatClient()
-    client.run()
-    delay(2.seconds)
-    client.connect("LUCAS")
-    delay(2.seconds)
-    client.disconnect()
+    val clients = listOf<KotlinChatClient>(KotlinChatClient(), KotlinChatClient(), KotlinChatClient(), KotlinChatClient())
+
+    for (client in clients) {
+        client.run()
+    }
+
+    delay(1.seconds)
+    for(client in clients) {
+        client.connect("LUCAS@${client.hashCode()}")
+        delay(1000.milliseconds)
+    }
 
 
 }
