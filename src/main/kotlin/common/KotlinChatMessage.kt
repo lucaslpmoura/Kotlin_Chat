@@ -6,7 +6,7 @@ data class KotlinChatMessage(val origin: String, val type: Type, val data: Strin
     val timestamp = System.currentTimeMillis()
 
     enum class Type {
-        CONNECT, DISCONNECT, AFK, LIST_ROOMS, JOIN_ROOM, LEAVE_ROOM, TEXT, ERROR
+        CONNECT, DISCONNECT, LIST_ROOMS, JOIN_ROOM, LEAVE_ROOM, TEXT, ERROR
     }
 
 
@@ -60,7 +60,6 @@ fun resolveTypeFromString(string : String) : KotlinChatMessage.Type?{
     return when(string) {
         "CONNECT" -> Type.CONNECT
         "DISCONNECT" -> Type.DISCONNECT
-        "AFK" -> Type.AFK
         "LIST_ROOMS" -> Type.LIST_ROOMS
         "JOIN_ROOM" -> Type.JOIN_ROOM
         "LEAVE_ROOM" -> Type.LEAVE_ROOM
@@ -100,7 +99,7 @@ Server -> CONNECT | USER_ID
 DISCONNECT
 
 Client -> DISCONNECT | USER_ID
-Server -> DISCONNECT |
+Server -> DISCONNECT
 
 The server can also send a disconnect message without a Client request, as to kick them out.
 
@@ -112,5 +111,8 @@ JOIN_ROOM
 Client -> JOIN_ROOM | USER_ID | ROOM_ID
 Server -> JOIN_ROOM | ROOM_ID
 
+LEAVE_ROOM
+Client -> LEAVE_ROOM | USER_ID | ROOM_ID
+Server -> LEAVE_ROOM | ROOM_ID
 
  */

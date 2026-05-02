@@ -3,6 +3,7 @@ package com.lucaslpmoura.kotlin_chat.client
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
+import com.lucaslpmoura.kotlin_chat.common.SERVER_PORT
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +19,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class KotlinChatClient {
 
     val serverAddress = "localhost"
-    val serverPort = 7960
+    val serverPort = SERVER_PORT
 
     private lateinit var socket: Socket
 
@@ -99,6 +100,12 @@ class KotlinChatClient {
         sendMessage(message)
     }
 
+    public fun leaveRoom(roomId: String = currentRoomId!!) {
+        checkConnection()
+        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.LEAVE_ROOM, "$id|$roomId")
+        sendMessage(message)
+    }
+
     private fun sendMessage(message: KotlinChatMessage) {
         try {
             socket.outputStream.write(message.toByteArray())
@@ -129,6 +136,8 @@ class KotlinChatClient {
             Type.LIST_ROOMS -> processListRoom(message)
 
             Type.JOIN_ROOM -> processJoinRoom(message)
+
+            Type.LEAVE_ROOM -> processLeaveRoom(message)
 
             Type.ERROR -> processError(message)
 
@@ -179,6 +188,16 @@ class KotlinChatClient {
         }
     }
 
+    private fun processLeaveRoom(message: KotlinChatMessage) {
+        try {
+            if (parseDataFromServerMessage(message)["id"] == currentRoomId) {
+                currentRoomId = null
+            }
+        }catch (e: Exception){
+            throw Exception("Error parsing LEAVE_ROOM message: ${e.message}")
+        }
+    }
+
     private fun processError(message: KotlinChatMessage) {
         lastError = message
         throw Exception("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
@@ -188,7 +207,7 @@ class KotlinChatClient {
 
     fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String>{
         return when(message.type) {
-            Type.CONNECT, Type.JOIN_ROOM -> {
+            Type.CONNECT, Type.JOIN_ROOM, Type.LEAVE_ROOM -> {
                 if(message.data.isEmpty()){
                     throw Exception("id not present.")
                 }

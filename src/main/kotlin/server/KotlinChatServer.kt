@@ -3,24 +3,29 @@ package com.lucaslpmoura.kotlin_chat.server
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
+import com.lucaslpmoura.kotlin_chat.common.SERVER_PORT
 import com.lucaslpmoura.kotlin_chat.common.USER_NAME_BUFFER_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
+import com.sun.security.ntlm.Client
 
 import java.net.ServerSocket
 import java.net.Socket
 
 import kotlinx.coroutines.*
+import java.net.SocketException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class KotlinChatServer {
 
-    val port : Int = 7960
+    @Volatile
+    var state : STATE = STATE.OFFLINE
+        private set
+
+    val port : Int = SERVER_PORT
     lateinit var socket : ServerSocket
-
-
 
     val MAX_ROOMS : Int = 3
     // Later use -> var numOfRooms: Int = 0
@@ -31,35 +36,78 @@ class KotlinChatServer {
     val mediator: UserRoomMediatorInterface = UserRoomMediator()
 
     private val initialConnectionScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var connectionJob : Job
 
     private val readScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     @Volatile
     private var userJobs : ConcurrentHashMap<String, Job> = ConcurrentHashMap<String, Job>()
 
-    public fun run(){
-        socket = ServerSocket(port)
 
-        initialConnectionScope.launch {
-            launch {
-                while(true){
-                    establishConnection()
-                }
-            }
+    public fun start(){
+        println("Starting server...")
+        if(state != STATE.OFFLINE && state != STATE.STOPPED){
+            throw Exception("Server has already started!")
         }
+        socket = ServerSocket(port)
+        println("Server listening at $port")
+        state = STATE.STARTING
+    }
+    public fun run(){
+        if(state != STATE.STARTING){
+            throw Exception("Server has not been started!!")
+        }
+
+        state = STATE.ONLINE
+        println("Starting connection coroutines...")
+
+        connectionJob = initialConnectionScope.launch {
+
+                while(state == STATE.ONLINE && socket.isBound) {
+
+                    try {
+                        establishConnection()
+                    }catch (e: SocketException) {
+                        println("Accept look finished (closed socket)")
+                        break
+                    } catch (e : Exception) {
+                        println("Error estabilishing connection: ${e.message}")
+                    }
+
+                }
+
+        }
+        println("Connection coroutines started!")
 
         mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 1", mediator, 3))
         mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 2", mediator, 3))
+
+
+        println("Server is online.")
     }
 
-    public fun stop(){
+    public suspend fun stop(){
+        if(state == STATE.OFFLINE || state == STATE.STOPPED){
+            throw Exception("Server is already stopped!")
+        }
+
+        println("Stopping server...")
+        socket.close()
+        println("Server socket closed.")
+
+        connectionJob.cancelAndJoin()
+
         initialConnectionScope.cancel()
         for(job in userJobs.values){
             job.cancel()
         }
         mediator.removeAllRooms()
         mediator.removeAllUsers()
-        socket.close()
+
+
+        state = STATE.STOPPED
+        println("Server stopped.")
+
     }
 
     private fun establishConnection() {
@@ -88,7 +136,7 @@ class KotlinChatServer {
             }
 
         }catch(e: Exception) {
-            println("Failed to connect user: ${e.message}")
+            throw e
         }
     }
 
@@ -107,10 +155,9 @@ class KotlinChatServer {
         println("TYPE: ${message.type.name}")
         when (message.type) {
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
-            KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> sendRoomList(message)
             KotlinChatMessage.Type.JOIN_ROOM -> addUserToRoom(message)
-            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> removeUserFromRoom(message)
             KotlinChatMessage.Type.TEXT -> TODO()
             KotlinChatMessage.Type.ERROR -> TODO()
             else -> {
@@ -125,10 +172,9 @@ class KotlinChatServer {
         when(type) {
             KotlinChatMessage.Type.CONNECT -> messageData = user.id
             KotlinChatMessage.Type.DISCONNECT -> messageData = ""
-            KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> messageData = mountRoomListMessageData()
             KotlinChatMessage.Type.JOIN_ROOM -> messageData = data
-            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> messageData = data
             KotlinChatMessage.Type.TEXT -> TODO()
 
             // ERROR
@@ -192,6 +238,26 @@ class KotlinChatServer {
         }catch(e: Exception){
             println("Failed to send room list to user $userId: ${e.message}")
             sendMessage(user, KotlinChatMessage.Type.ERROR, "Error joining room $roomId.")
+        }
+    }
+
+    private fun removeUserFromRoom(message: KotlinChatMessage) {
+        lateinit var userId: String
+        lateinit var roomId: String
+        lateinit var user : KotlinChatUser
+        try{
+            val data = parseDataFromClientMessage(message)
+            userId = data["userId"]!!
+            roomId = data["roomId"]!!
+
+            user = mediator.getUserById(userId)
+            val room = mediator.getRoomById(roomId)
+            mediator.removeUserFromRoom(user, room)
+
+            sendMessage(user, KotlinChatMessage.Type.LEAVE_ROOM, roomId)
+        }catch(e: Exception){
+            println("Failed to send room list to user $userId: ${e.message}")
+            sendMessage(user, KotlinChatMessage.Type.ERROR, "Error leaving room $roomId.")
         }
     }
 
@@ -306,5 +372,9 @@ class KotlinChatServer {
     @OptIn(ExperimentalUuidApi::class)
     private fun generateUUID() : String{
         return Uuid.random().toString()
+    }
+
+    public enum class STATE{
+        OFFLINE, STARTING, ONLINE, STOPPED
     }
 }
