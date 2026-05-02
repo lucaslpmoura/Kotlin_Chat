@@ -1,9 +1,9 @@
 package com.lucaslpmoura.kotlin_chat.client
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
-import com.lucaslpmoura.kotlin_chat.common.parseDataFromServerMessage
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -135,6 +135,25 @@ class KotlinChatClient {
     private fun processError(message: KotlinChatMessage) {
         println("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
         lastError = message
+    }
+
+
+
+    fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String>{
+        return when(message.type) {
+            Type.CONNECT -> {
+                if(message.data.isEmpty()){
+                    throw Exception("id not present.")
+                }
+                mapOf("id" to message.data)
+            }
+            Type.ERROR -> {
+                mapOf("error" to message.data)
+            }
+            else -> {
+                mapOf<String, String>("content" to "")
+            }
+        }
     }
 
 }

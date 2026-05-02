@@ -1,10 +1,10 @@
 package com.lucaslpmoura.kotlin_chat.server
 
 import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage
+import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
 import com.lucaslpmoura.kotlin_chat.common.USER_NAME_BUFFER_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
-import com.lucaslpmoura.kotlin_chat.common.parseDataFromClientMessage
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
 
 import java.net.ServerSocket
@@ -12,7 +12,6 @@ import java.net.Socket
 
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -172,6 +171,26 @@ class KotlinChatServer {
             return parseDataFromClientMessage(messageFromBytes)["name"] ?: throw Exception("Could not read user's name!")
         }catch(e: Exception){
             throw Exception("Failed to read user name: ${e.message}")
+        }
+    }
+
+    fun parseDataFromClientMessage(message : KotlinChatMessage) : Map<String, String>{
+        return when(message.type) {
+            Type.CONNECT -> {
+                if(message.data.isEmpty()){
+                    throw Exception("name not present.")
+                }
+                mapOf("name" to message.data)
+            }
+            Type.DISCONNECT -> {
+                if(message.data.isEmpty()){
+                    throw Exception("id not present.")
+                }
+                mapOf("id" to message.data)
+            }
+            else -> {
+                mapOf<String, String>("content" to "")
+            }
         }
     }
 
