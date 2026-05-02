@@ -46,7 +46,8 @@ class KotlinChatServer {
             }
         }
 
-
+        mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 1", mediator, 3))
+        mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 2", mediator, 3))
     }
 
     private fun establishConnection() {
@@ -90,29 +91,12 @@ class KotlinChatServer {
         }
     }
 
-    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
-        val origin = "SERVER"
-        lateinit var messageData: String
-        when(type) {
-            KotlinChatMessage.Type.CONNECT -> messageData = user.id
-            KotlinChatMessage.Type.DISCONNECT -> messageData = ""
-            KotlinChatMessage.Type.AFK -> TODO()
-            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
-            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
-            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
-            KotlinChatMessage.Type.TEXT -> TODO()
-
-            // ERROR
-            else -> {messageData = data}
-        }
-        return KotlinChatMessage(origin, type, messageData)
-    }
-
     private fun processReceivedMessage(message: KotlinChatMessage) {
+        println("TYPE: ${message.type.name}")
         when (message.type) {
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
             KotlinChatMessage.Type.AFK -> TODO()
-            KotlinChatMessage.Type.LIST_ROOMS -> TODO()
+            KotlinChatMessage.Type.LIST_ROOMS -> sendRoomList(message)
             KotlinChatMessage.Type.JOIN_ROOM -> TODO()
             KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
             KotlinChatMessage.Type.TEXT -> TODO()
@@ -124,17 +108,56 @@ class KotlinChatServer {
         }
     }
 
+    private fun constructMessage(user: KotlinChatUser, type: KotlinChatMessage.Type, data: String = ""): KotlinChatMessage {
+        lateinit var messageData: String
+        when(type) {
+            KotlinChatMessage.Type.CONNECT -> messageData = user.id
+            KotlinChatMessage.Type.DISCONNECT -> messageData = ""
+            KotlinChatMessage.Type.AFK -> TODO()
+            KotlinChatMessage.Type.LIST_ROOMS -> messageData = mountRoomListMessageData()
+            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
+            KotlinChatMessage.Type.TEXT -> TODO()
+
+            // ERROR
+            else -> {messageData = data}
+        }
+        return KotlinChatMessage(user.id, type, messageData)
+    }
+
+    private fun mountRoomListMessageData() : String {
+        var data : String =  ""
+        for(room in mediator.getAllRooms()){
+            data += room.id + '|' + room.name + '|'
+        }
+        data = data.dropLast(1) // Removes the last '|'
+        return data
+    }
+
     private fun disconnectClient(message: KotlinChatMessage) {
         try{
             val userId = parseDataFromClientMessage(message)["id"]!!
             val user = mediator.getUserById(userId)
             if(message.origin == "SERVER" || message.origin == user.address){
                 removeUser(user)
+                sendMessage(user, KotlinChatMessage.Type.DISCONNECT)
             }else{
                 throw Exception("You don't have permission do disconnect users.")
             }
         }catch(e: Exception){
             println("Failed to disconnect user: ${e.message}")
+
+        }
+    }
+
+    private fun sendRoomList(message: KotlinChatMessage) {
+        lateinit var userId: String
+        try{
+            userId = parseDataFromClientMessage(message)["id"]!!
+            val user = mediator.getUserById(userId)
+            sendMessage(user, KotlinChatMessage.Type.LIST_ROOMS)
+        }catch(e: Exception){
+            println("Failed to send room list to user $userId: ${e.message}")
 
         }
     }
@@ -174,7 +197,7 @@ class KotlinChatServer {
         }
     }
 
-    fun parseDataFromClientMessage(message : KotlinChatMessage) : Map<String, String>{
+    private fun parseDataFromClientMessage(message : KotlinChatMessage) : Map<String, String>{
         return when(message.type) {
             Type.CONNECT -> {
                 if(message.data.isEmpty()){
@@ -182,7 +205,7 @@ class KotlinChatServer {
                 }
                 mapOf("name" to message.data)
             }
-            Type.DISCONNECT -> {
+            Type.DISCONNECT, Type.LIST_ROOMS -> {
                 if(message.data.isEmpty()){
                     throw Exception("id not present.")
                 }

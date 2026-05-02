@@ -5,6 +5,7 @@ import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
+import com.lucaslpmoura.kotlin_chat.server.KotlinChatRoom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,7 +14,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.Socket
-import java.nio.charset.Charset
 import kotlin.time.Duration.Companion.milliseconds
 
 class KotlinChatClient {
@@ -21,25 +21,27 @@ class KotlinChatClient {
     val serverAddress = "localhost"
     val serverPort = 7960
 
-    private lateinit var socket : Socket
+    private lateinit var socket: Socket
 
     @Volatile
-    private var isTCPConnected: Boolean = false
+    var isTCPConnected: Boolean = false
 
     @Volatile
-    private var isConnected : Boolean = false
+    var isConnected: Boolean = false
 
-    var name : String? = null
+    var name: String? = null
         private set
-    var id : String? = null
+    var id: String? = null
         private set
 
-    var lastError : KotlinChatMessage? = null
+    var serverRooms: Map<String, String> = mapOf<String, String>()
+
+    var lastError: KotlinChatMessage? = null
 
     private val tcpConnectionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    public fun run(){
+    public fun run() {
 
         tcpConnectionScope.launch {
             while (!isTCPConnected) {
@@ -56,30 +58,50 @@ class KotlinChatClient {
 
         readScope.launch {
             while (true) {
-                if(isTCPConnected) {
+                if (isTCPConnected) {
                     val message = readMessage()
                     processMessage(message)
-                }else{
+                } else {
                     delay(100.milliseconds)
                 }
             }
         }
     }
 
-    public fun connect(name : String) {
-        if(!isTCPConnected) throw IOException("Socket is not connected.")
+    public fun connect(name: String) {
+        if (!isTCPConnected) throw IOException("Socket is not connected.")
         val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.CONNECT, name)
         socket.outputStream.write(message.toByteArray())
     }
 
-    public suspend fun disconnect(disconnectId : String = id!!) {
-        if(!isTCPConnected) throw IOException("Socket is not connected.")
-        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.DISCONNECT, disconnectId ?: throw IOException("Id is not set."))
-        println(message.toByteArray().toString(Charsets.UTF_8))
+    public suspend fun disconnect(disconnectId: String = id!!) {
+        if (!isTCPConnected) throw IOException("Socket is not connected.")
+        val message = KotlinChatMessage(
+            "SELF",
+            KotlinChatMessage.Type.DISCONNECT,
+            disconnectId ?: throw IOException("Id is not set.")
+        )
         socket.outputStream.write(message.toByteArray())
         delay(100.milliseconds)
         processDisconnect()
     }
+
+    public fun listRooms() {
+        if (!isTCPConnected) throw IOException("Socket is not connected.")
+        if (!isConnected) throw IOException("You are not connected to the server.")
+        val message = KotlinChatMessage(origin = "SELF", KotlinChatMessage.Type.LIST_ROOMS, id!!)
+        sendMessage(message)
+
+    }
+
+    private fun sendMessage(message: KotlinChatMessage) {
+        try {
+            socket.outputStream.write(message.toByteArray())
+        }catch (e: IOException) {
+            throw Exception("Failed to write to server: ${e.message}")
+        }
+    }
+
 
     private fun readMessage() : KotlinChatMessage {
         val buffer = ByteArray(MAX_MESSAGE_SIZE)
@@ -87,7 +109,7 @@ class KotlinChatClient {
             socket.inputStream.read(buffer)
 
         }catch (e: IOException){
-            println("Failed to read from server: ${e.message}")
+            throw Exception("Failed to read from server: ${e.message}")
         }
         return getMessageFromBytes("SERVER", buffer)
     }
@@ -99,6 +121,9 @@ class KotlinChatClient {
             }
             KotlinChatMessage.Type.DISCONNECT -> {
                 processDisconnect()
+            }
+            KotlinChatMessage.Type.LIST_ROOMS -> {
+                processListRoom(message)
             }
             KotlinChatMessage.Type.ERROR -> {
                 processError(message)
@@ -118,7 +143,7 @@ class KotlinChatClient {
                 println("Connected to chat with id $id")
             }
         }catch (e: Exception){
-            println("Error parsing CONNECT message: ${e.message}")
+            throw Exception("Error parsing CONNECT message: ${e.message}")
         }
     }
 
@@ -132,9 +157,17 @@ class KotlinChatClient {
         }
     }
 
+    private fun processListRoom(message: KotlinChatMessage) {
+        try{
+            serverRooms = parseDataFromServerMessage(message)
+        }catch (e: Exception){
+            throw Exception("Error parsing LIST_ROOM message: ${e.message}")
+        }
+    }
+
     private fun processError(message: KotlinChatMessage) {
-        println("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
         lastError = message
+        throw Exception("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
     }
 
 
@@ -146,6 +179,28 @@ class KotlinChatClient {
                     throw Exception("id not present.")
                 }
                 mapOf("id" to message.data)
+            }
+            Type.LIST_ROOMS -> {
+                val serverRooms = mutableMapOf<String, String>()
+
+                if(!message.data.isEmpty()){
+                    val splitData = message.data.split('|')
+
+                    /*
+                    Creates a map such that:
+                    map[roomId] == roomName
+                     */
+                    for(i in splitData.indices step 2){
+                        try{
+                            serverRooms[splitData[i]] = splitData[i+1]
+                        }catch (e: IndexOutOfBoundsException){
+                            break
+                        }
+
+
+                    }
+                }
+                serverRooms.toMap<String, String>()
             }
             Type.ERROR -> {
                 mapOf("error" to message.data)

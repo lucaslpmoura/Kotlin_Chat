@@ -14,4 +14,6 @@ interface UserRoomMediatorInteface {
     public fun isUserConnected(user: KotlinChatUser) : Boolean
     public fun getUserById(id: String) : KotlinChatUser
     public fun getRoomById(id: String) : KotlinChatRoom
+    public fun getAllRooms() : Set<KotlinChatRoom>
+    public fun getAllUsers() : Set<KotlinChatUser>
 }

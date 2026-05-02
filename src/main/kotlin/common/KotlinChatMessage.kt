@@ -61,7 +61,7 @@ fun resolveTypeFromString(string : String) : KotlinChatMessage.Type?{
         "CONNECT" -> Type.CONNECT
         "DISCONNECT" -> Type.DISCONNECT
         "AFK" -> Type.AFK
-        "LIST_ROOM" -> Type.LIST_ROOMS
+        "LIST_ROOMS" -> Type.LIST_ROOMS
         "JOIN_ROOM" -> Type.JOIN_ROOM
         "LEAVE_ROOM" -> Type.LEAVE_ROOM
         "TEXT" -> Type.TEXT

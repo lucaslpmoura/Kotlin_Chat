@@ -110,6 +110,14 @@ class UserRoomMediator : UserRoomMediatorInteface {
         throw Exception("No room with id $id exists.")
     }
 
+    override fun getAllRooms(): Set<KotlinChatRoom> {
+        return roomUserMap.keys.toSet()
+    }
+
+    override fun getAllUsers(): Set<KotlinChatUser> {
+        return userRoomMap.keys.toSet()
+    }
+
 
     private fun checkIfRoomExists(room: KotlinChatRoom) {
         if(!roomUserMap.containsKey(room)){
