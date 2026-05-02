@@ -1,10 +1,12 @@
 package com.lucaslpmoura.kotlin_chat.server
 
-interface UserRoomMediatorInteface {
+interface UserRoomMediatorInterface {
     public fun addRoom(room: KotlinChatRoom)
     public fun removeRoom(room: KotlinChatRoom)
+    public fun removeAllRooms()
     public fun addUser(user: KotlinChatUser)
     public fun removeUser(user: KotlinChatUser)
+    public fun removeAllUsers()
     public fun addUserToRoom(user: KotlinChatUser, room: KotlinChatRoom)
     public fun removeUserFromRoom(user: KotlinChatUser, room: KotlinChatRoom)
     public fun getUserRoom(user: KotlinChatUser): KotlinChatRoom?

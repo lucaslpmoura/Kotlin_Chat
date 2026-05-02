@@ -3,7 +3,7 @@ package com.lucaslpmoura.kotlin_chat.server
 import kotlin.collections.get
 
 
-class UserRoomMediator : UserRoomMediatorInteface {
+class UserRoomMediator : UserRoomMediatorInterface {
     private val userRoomMap: MutableMap<KotlinChatUser, KotlinChatRoom?> = mutableMapOf<KotlinChatUser, KotlinChatRoom?>()
     private val roomUserMap: MutableMap<KotlinChatRoom, MutableSet<KotlinChatUser>> = mutableMapOf<KotlinChatRoom, MutableSet<KotlinChatUser>>()
 
@@ -26,6 +26,14 @@ class UserRoomMediator : UserRoomMediatorInteface {
         roomUserMap.remove(room)
     }
 
+    override fun removeAllRooms() {
+        for(user in userRoomMap.keys){
+            userRoomMap[user] = null
+        }
+        roomUserMap.clear()
+
+    }
+
     override fun addUser(user: KotlinChatUser) {
         if(userRoomMap.containsKey(user)){
             throw Exception("User already on server.")
@@ -42,6 +50,12 @@ class UserRoomMediator : UserRoomMediatorInteface {
         userRoomMap.remove(user)
     }
 
+    override fun removeAllUsers() {
+        for(room in roomUserMap.keys){
+            roomUserMap[room]?.clear()
+        }
+        userRoomMap.clear()
+    }
 
     override fun addUserToRoom(user: KotlinChatUser, room: KotlinChatRoom) {
         checkIfUserAndRoomExists(user, room)

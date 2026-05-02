@@ -18,7 +18,7 @@ import kotlin.uuid.Uuid
 class KotlinChatServer {
 
     val port : Int = 7960
-    val socket : ServerSocket = ServerSocket(port)
+    lateinit var socket : ServerSocket
 
 
 
@@ -28,7 +28,7 @@ class KotlinChatServer {
     var numOfUsers: Int = 0
 
 
-    val mediator: UserRoomMediatorInteface = UserRoomMediator()
+    val mediator: UserRoomMediatorInterface = UserRoomMediator()
 
     private val initialConnectionScope : CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -38,6 +38,8 @@ class KotlinChatServer {
     private var userJobs : ConcurrentHashMap<String, Job> = ConcurrentHashMap<String, Job>()
 
     public fun run(){
+        socket = ServerSocket(port)
+
         initialConnectionScope.launch {
             launch {
                 while(true){
@@ -48,6 +50,16 @@ class KotlinChatServer {
 
         mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 1", mediator, 3))
         mediator.addRoom(KotlinChatRoom(generateUUID(), "Room 2", mediator, 3))
+    }
+
+    public fun stop(){
+        initialConnectionScope.cancel()
+        for(job in userJobs.values){
+            job.cancel()
+        }
+        mediator.removeAllRooms()
+        mediator.removeAllUsers()
+        socket.close()
     }
 
     private fun establishConnection() {
