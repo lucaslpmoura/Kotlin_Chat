@@ -6,6 +6,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,6 +40,24 @@ class KotlinChatServerClientTest : FunSpec({
             delay(100.milliseconds)
 
             client.serverRooms.values.shouldContainAll("Room 1", "Room 2")
+        }
+
+        test("joining room"){
+            while(!client.isConnected){
+                delay(100.milliseconds)
+            }
+
+            client.listRooms()
+
+            while(client.serverRooms.isEmpty()){
+                delay(100.milliseconds)
+            }
+
+            val roomid = client.serverRooms.keys.elementAt(0)
+            client.joinRoom(roomid)
+            delay(100.milliseconds)
+
+            client.currentRoomId shouldBe roomid
         }
     }
 })

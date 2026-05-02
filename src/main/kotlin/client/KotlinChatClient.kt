@@ -5,7 +5,6 @@ import com.lucaslpmoura.kotlin_chat.common.KotlinChatMessage.Type
 import com.lucaslpmoura.kotlin_chat.common.MAX_MESSAGE_SIZE
 import com.lucaslpmoura.kotlin_chat.common.getMessageFromBytes
 import com.lucaslpmoura.kotlin_chat.common.toByteArray
-import com.lucaslpmoura.kotlin_chat.server.KotlinChatRoom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +34,7 @@ class KotlinChatClient {
         private set
 
     var serverRooms: Map<String, String> = mapOf<String, String>()
+    var currentRoomId: String? = null
 
     var lastError: KotlinChatMessage? = null
 
@@ -69,13 +69,13 @@ class KotlinChatClient {
     }
 
     public fun connect(name: String) {
-        if (!isTCPConnected) throw IOException("Socket is not connected.")
+        checkTCPConnection()
         val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.CONNECT, name)
         socket.outputStream.write(message.toByteArray())
     }
 
     public suspend fun disconnect(disconnectId: String = id!!) {
-        if (!isTCPConnected) throw IOException("Socket is not connected.")
+        checkTCPConnection()
         val message = KotlinChatMessage(
             "SELF",
             KotlinChatMessage.Type.DISCONNECT,
@@ -87,11 +87,16 @@ class KotlinChatClient {
     }
 
     public fun listRooms() {
-        if (!isTCPConnected) throw IOException("Socket is not connected.")
-        if (!isConnected) throw IOException("You are not connected to the server.")
+        checkConnection()
         val message = KotlinChatMessage(origin = "SELF", KotlinChatMessage.Type.LIST_ROOMS, id!!)
         sendMessage(message)
 
+    }
+
+    public fun joinRoom(roomId: String) {
+        checkConnection()
+        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.JOIN_ROOM, "$id|$roomId")
+        sendMessage(message)
     }
 
     private fun sendMessage(message: KotlinChatMessage) {
@@ -114,20 +119,19 @@ class KotlinChatClient {
         return getMessageFromBytes("SERVER", buffer)
     }
 
+
     private fun processMessage(message: KotlinChatMessage) {
         when(message.type) {
-            KotlinChatMessage.Type.CONNECT -> {
-                processConnect(message)
-            }
-            KotlinChatMessage.Type.DISCONNECT -> {
-                processDisconnect()
-            }
-            KotlinChatMessage.Type.LIST_ROOMS -> {
-                processListRoom(message)
-            }
-            KotlinChatMessage.Type.ERROR -> {
-                processError(message)
-            }
+            Type.CONNECT -> processConnect(message)
+
+            Type.DISCONNECT -> processDisconnect()
+
+            Type.LIST_ROOMS -> processListRoom(message)
+
+            Type.JOIN_ROOM -> processJoinRoom(message)
+
+            Type.ERROR -> processError(message)
+
             else -> TODO()
         }
 
@@ -154,6 +158,8 @@ class KotlinChatClient {
         isTCPConnected = false
         if(!isTCPConnected) {
             println("Disconnected from server.")
+        }else{
+            socket.close()
         }
     }
 
@@ -162,6 +168,14 @@ class KotlinChatClient {
             serverRooms = parseDataFromServerMessage(message)
         }catch (e: Exception){
             throw Exception("Error parsing LIST_ROOM message: ${e.message}")
+        }
+    }
+
+    private fun processJoinRoom(message: KotlinChatMessage) {
+        try{
+            currentRoomId = parseDataFromServerMessage(message)["id"]
+        }catch (e: Exception){
+            throw Exception("Error parsing JOIN_ROOM message: ${e.message}")
         }
     }
 
@@ -174,7 +188,7 @@ class KotlinChatClient {
 
     fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String>{
         return when(message.type) {
-            Type.CONNECT -> {
+            Type.CONNECT, Type.JOIN_ROOM -> {
                 if(message.data.isEmpty()){
                     throw Exception("id not present.")
                 }
@@ -211,4 +225,12 @@ class KotlinChatClient {
         }
     }
 
+    private fun checkTCPConnection() {
+        if (!isTCPConnected) throw IOException("Socket is not connected.")
+    }
+
+    private fun checkConnection() {
+        checkTCPConnection()
+        if (!isConnected) throw IOException("You are not connected to the server.")
+    }
 }

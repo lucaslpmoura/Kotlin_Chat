@@ -97,7 +97,7 @@ class KotlinChatServer {
             KotlinChatMessage.Type.DISCONNECT -> disconnectClient(message)
             KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> sendRoomList(message)
-            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.JOIN_ROOM -> addUserToRoom(message)
             KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
             KotlinChatMessage.Type.TEXT -> TODO()
             KotlinChatMessage.Type.ERROR -> TODO()
@@ -115,7 +115,7 @@ class KotlinChatServer {
             KotlinChatMessage.Type.DISCONNECT -> messageData = ""
             KotlinChatMessage.Type.AFK -> TODO()
             KotlinChatMessage.Type.LIST_ROOMS -> messageData = mountRoomListMessageData()
-            KotlinChatMessage.Type.JOIN_ROOM -> TODO()
+            KotlinChatMessage.Type.JOIN_ROOM -> messageData = data
             KotlinChatMessage.Type.LEAVE_ROOM -> TODO()
             KotlinChatMessage.Type.TEXT -> TODO()
 
@@ -152,13 +152,34 @@ class KotlinChatServer {
 
     private fun sendRoomList(message: KotlinChatMessage) {
         lateinit var userId: String
+        lateinit var user : KotlinChatUser
         try{
             userId = parseDataFromClientMessage(message)["id"]!!
-            val user = mediator.getUserById(userId)
+            user = mediator.getUserById(userId)
             sendMessage(user, KotlinChatMessage.Type.LIST_ROOMS)
         }catch(e: Exception){
             println("Failed to send room list to user $userId: ${e.message}")
+            sendMessage(user, KotlinChatMessage.Type.ERROR, "Error joining room.")
+        }
+    }
 
+    private fun addUserToRoom(message: KotlinChatMessage) {
+        lateinit var userId: String
+        lateinit var roomId: String
+        lateinit var user : KotlinChatUser
+        try{
+            val data = parseDataFromClientMessage(message)
+            userId = data["userId"]!!
+            roomId = data["roomId"]!!
+
+            user = mediator.getUserById(userId)
+            val room = mediator.getRoomById(roomId)
+            mediator.addUserToRoom(user, room)
+
+            sendMessage(user, KotlinChatMessage.Type.JOIN_ROOM, roomId)
+        }catch(e: Exception){
+            println("Failed to send room list to user $userId: ${e.message}")
+            sendMessage(user, KotlinChatMessage.Type.ERROR, "Error joining room $roomId.")
         }
     }
 
@@ -210,6 +231,23 @@ class KotlinChatServer {
                     throw Exception("id not present.")
                 }
                 mapOf("id" to message.data)
+            }
+            Type.JOIN_ROOM -> {
+                val ids = mutableMapOf<String,String>()
+                if(message.data.isEmpty()){
+                    throw Exception("no data provided.")
+                }
+
+                val splitData = message.data.split('|')
+                println(splitData)
+                if(splitData.size != 2){
+                    throw Exception("room or user id missing.")
+                }
+
+                ids["userId"] = splitData[0]
+                ids["roomId"] = splitData[1]
+
+                ids.toMap()
             }
             else -> {
                 mapOf<String, String>("content" to "")

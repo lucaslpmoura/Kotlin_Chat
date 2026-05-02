@@ -86,6 +86,7 @@ If a message is processed successfully, the Server will return a message with th
 Otherwise, the ERROR type will be sent.
 Only the server can use the ERROR type.
 
+
 The messages will be shown in pairs, as follows:
 
 
@@ -93,14 +94,23 @@ CONNECT
 
 Client -> TCP_HANDSHAKE
 Server -> TCP_HANDSHAKE
-Client  -> CONNECT | USERNAME |
+Client  -> CONNECT | USERNAME
 Server -> CONNECT | USER_ID
 
 DISCONNECT
 
-Client -> DISCONNECT | USER_ID |
+Client -> DISCONNECT | USER_ID
 Server -> DISCONNECT |
 
 The server can also send a disconnect message without a Client request, as to kick them out.
+
+LIST_ROOMS
+Client -> LIST_ROOMS | USER_ID
+Server -> LIST_ROOMS | ROOM_ID1 | ROOM_NAME1 | ROOM_ID1 | ROOM_NAME2 | ... | ROOM_IDn | ROOM_NAMEn
+
+JOIN_ROOM
+Client -> JOIN_ROOM | USER_ID | ROOM_ID
+Server -> JOIN_ROOM | ROOM_ID
+
 
  */
