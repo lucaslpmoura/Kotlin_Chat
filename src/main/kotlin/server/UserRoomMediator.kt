@@ -106,6 +106,10 @@ class UserRoomMediator : UserRoomMediatorInterface {
         return userRoomMap.containsKey(user)
     }
 
+    override fun isUserInRoom(user: KotlinChatUser, room: KotlinChatRoom) : Boolean{
+        return userRoomMap[user] == room
+    }
+
     override fun getUserById(id: String): KotlinChatUser {
         for (user in userRoomMap.keys){
             if(user.id == id){
