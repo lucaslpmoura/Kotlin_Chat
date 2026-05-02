@@ -190,7 +190,10 @@ class KotlinChatClient {
 
     private fun processLeaveRoom(message: KotlinChatMessage) {
         try {
-            if (parseDataFromServerMessage(message)["id"] == currentRoomId) {
+            val serverRoomId = parseDataFromServerMessage(message)["id"]
+            println("Server room id: $serverRoomId")
+            println("Current room id: $currentRoomId")
+            if (serverRoomId == currentRoomId) {
                 currentRoomId = null
             }
         }catch (e: Exception){

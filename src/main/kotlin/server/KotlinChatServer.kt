@@ -247,6 +247,7 @@ class KotlinChatServer {
         lateinit var user : KotlinChatUser
         try{
             val data = parseDataFromClientMessage(message)
+            println("Message data: $data")
             userId = data["userId"]!!
             roomId = data["roomId"]!!
 
@@ -310,7 +311,7 @@ class KotlinChatServer {
                 }
                 mapOf("id" to message.data)
             }
-            Type.JOIN_ROOM -> {
+            Type.JOIN_ROOM, Type.LEAVE_ROOM -> {
                 val ids = mutableMapOf<String,String>()
                 if(message.data.isEmpty()){
                     throw Exception("no data provided.")
