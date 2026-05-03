@@ -154,7 +154,7 @@ class KotlinChatServer {
 
     private fun sendTextMessage(room: KotlinChatRoom, originUser: KotlinChatUser, type: KotlinChatMessage.Type,  text: String = "") {
         for(user in mediator.getRoomUsers(room)){
-            sendMessage(user, Type.TEXT, mapOf("roomId" to room.id, "text" to text))
+            sendMessage(user, Type.TEXT, mapOf("roomId" to room.id, "originUserName" to originUser.name, "text" to text))
         }
     }
 
@@ -184,6 +184,7 @@ class KotlinChatServer {
             KotlinChatMessage.Type.LEAVE_ROOM -> messageData = data["data"]!!
             KotlinChatMessage.Type.TEXT -> messageData = mountTextMessageData(user, data)
 
+
             // ERROR
             else -> {messageData = data["data"]!!}
         }
@@ -200,7 +201,7 @@ class KotlinChatServer {
     }
 
     private fun mountTextMessageData(user: KotlinChatUser, data: Map<String,String>) : String {
-        return "${user.name}|${data["roomId"]!!}|${data["text"]}"
+        return "${data["originUserName"]}|${data["roomId"]!!}|${data["text"]}"
     }
 
     private fun disconnectClient(message: KotlinChatMessage) {
@@ -375,7 +376,7 @@ class KotlinChatServer {
                 }
 
                 val splitData = message.data.split('|')
-                println(splitData)
+
                 if(splitData.size != 3){
                     throw Exception("room id , user id or text missing.")
                 }

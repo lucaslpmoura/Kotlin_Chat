@@ -17,10 +17,11 @@ class KotlinChatServerClientTest : FunSpec({
     context("session commands") {
 
         lateinit var client : KotlinChatClient
+        lateinit var client1 : KotlinChatClient
         lateinit var server: KotlinChatServer
 
         beforeEach{
-            println("BEFORE TEST")
+            println("[TEST] Creating variables...")
             server = KotlinChatServer()
             server.start()
             server.run()
@@ -28,10 +29,17 @@ class KotlinChatServerClientTest : FunSpec({
             delay(100.milliseconds) // Giving time for server to start
             client.run()
 
+            client1 = KotlinChatClient()
+            delay(100.milliseconds) // Giving time for server to start
+            client1.run()
+
             shouldNotThrowAny {
                 println("[TEST] Connecting to server...")
                 delay(100.milliseconds)
                 client.connect("João da Silva")
+                delay(100.milliseconds)
+                client1.connect("José dos Santos")
+                delay(100.milliseconds)
 
             }
 
@@ -40,6 +48,8 @@ class KotlinChatServerClientTest : FunSpec({
         afterEach{
             println("AFTER TEST")
             client.disconnect()
+            delay(100.milliseconds)
+            client1.disconnect()
             delay(100.milliseconds)
             server.stop()
             delay(2.seconds)
@@ -102,6 +112,36 @@ class KotlinChatServerClientTest : FunSpec({
 
                 client.currentRoomId shouldBe null
             }
+        }
+
+        context("TEXT"){
+            test("sending/reading text message"){
+                client.listRooms()
+                client1.listRooms()
+
+                while(client.serverRooms.isEmpty() && client1.serverRooms.isEmpty()){
+                    delay(100.milliseconds)
+                }
+
+
+                client.joinRoom(client.serverRooms.keys.elementAt(0))
+                client1.joinRoom(client1.serverRooms.keys.elementAt(0))
+                delay(100.milliseconds)
+
+                client.currentRoomId shouldBe client1.currentRoomId
+
+                val text = "Olá!"
+
+                client.text(text)
+                delay(100.milliseconds)
+
+
+                println("[TEST] Expected origin: ${client.name}")
+                println("[TEST] Expected data: ${text}")
+                client1.lastText!!.origin shouldBe client.name
+                client1.lastText!!.data  shouldBe text
+            }
+
         }
     }
 })

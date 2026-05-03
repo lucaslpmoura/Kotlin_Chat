@@ -38,6 +38,7 @@ class KotlinChatClient {
     var currentRoomId: String? = null
 
     var lastError: KotlinChatMessage? = null
+    var lastText: KotlinChatMessage? = null
 
     private val tcpConnectionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -69,9 +70,10 @@ class KotlinChatClient {
         }
     }
 
-    public fun connect(name: String) {
+    public fun connect(desiredName: String) {
         checkTCPConnection()
-        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.CONNECT, name)
+        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.CONNECT, desiredName)
+        name = desiredName
         socket.outputStream.write(message.toByteArray())
     }
 
@@ -103,6 +105,15 @@ class KotlinChatClient {
     public fun leaveRoom(roomId: String = currentRoomId!!) {
         checkConnection()
         val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.LEAVE_ROOM, "$id|$roomId")
+        sendMessage(message)
+    }
+
+    public fun text(text: String, roomId: String = currentRoomId!!) {
+        checkConnection()
+        if(currentRoomId == null) {
+            throw Exception("You are not connected to any room.")
+        }
+        val message = KotlinChatMessage("SELF", KotlinChatMessage.Type.TEXT, "$id|$roomId|$text")
         sendMessage(message)
     }
 
@@ -139,7 +150,10 @@ class KotlinChatClient {
 
             Type.LEAVE_ROOM -> processLeaveRoom(message)
 
+            Type.TEXT -> processText(message)
+
             Type.ERROR -> processError(message)
+
 
             else -> TODO()
         }
@@ -201,6 +215,23 @@ class KotlinChatClient {
         }
     }
 
+    private fun processText(message: KotlinChatMessage) {
+        try{
+            val originUser = parseDataFromServerMessage(message)["originUser"] ?: throw Exception("Origin user not provided.")
+            val roomId = parseDataFromServerMessage(message)["roomId"] ?: throw Exception("Room id not provided.")
+            val text = parseDataFromServerMessage(message)["text"] ?: throw Exception("Text not provided.")
+            if(roomId != currentRoomId){
+                throw Exception("Client not connected to room $roomId")
+            }
+
+
+            lastText = KotlinChatMessage(originUser, Type.TEXT, text)
+            println("LAST TEXT: ${lastText?.data}")
+        }catch (e: Exception){
+            throw Exception("Error parsing TEXT message: ${e.message}")
+        }
+    }
+
     private fun processError(message: KotlinChatMessage) {
         lastError = message
         throw Exception("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
@@ -219,24 +250,58 @@ class KotlinChatClient {
             Type.LIST_ROOMS -> {
                 val serverRooms = mutableMapOf<String, String>()
 
-                if(!message.data.isEmpty()){
+                if(!message.data.isEmpty()) {
                     val splitData = message.data.split('|')
 
                     /*
                     Creates a map such that:
                     map[roomId] == roomName
                      */
-                    for(i in splitData.indices step 2){
-                        try{
-                            serverRooms[splitData[i]] = splitData[i+1]
-                        }catch (e: IndexOutOfBoundsException){
+                    for (i in splitData.indices step 2) {
+                        try {
+                            serverRooms[splitData[i]] = splitData[i + 1]
+                        } catch (e: IndexOutOfBoundsException) {
                             break
                         }
 
 
                     }
+                }else{
+                    throw Exception("message is empty.")
                 }
                 serverRooms.toMap<String, String>()
+            }
+
+            Type.TEXT -> {
+                lateinit var originUser : String
+                lateinit var roomId : String
+                lateinit var text : String
+
+                if(message.data.isEmpty()){
+                    throw Exception("message is empty.")
+                }
+
+                val splitData = message.data.split('|')
+                try{
+                    originUser = splitData[0]
+                    roomId = splitData[1]
+                    text = splitData[2]
+                }catch (e: IndexOutOfBoundsException){
+                    throw Exception("originUser, roomId or text is null.")
+                }
+
+
+                if(originUser.isEmpty()){
+                    throw Exception("invalid originUser")
+                }
+                if(roomId.isEmpty()){
+                    throw Exception("invalid roomId")
+                }
+                if(text.isEmpty()){
+                    throw Exception("text is empty.")
+                }
+
+                mapOf("originUser" to originUser, "roomId" to roomId, "text" to text)
             }
             Type.ERROR -> {
                 mapOf("error" to message.data)
