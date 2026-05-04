@@ -18,7 +18,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class KotlinChatClient {
 
-    val serverAddress = "localhost"
+    var serverAddress = "localhost"
     val serverPort = SERVER_PORT
 
     private lateinit var socket: Socket
