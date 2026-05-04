@@ -1,9 +1,12 @@
 #!/usr/bin/env kotlin
 import org.gradle.api.publish.maven.MavenPublication
 
+group = "com.github.lucaslpmoura"
+
 plugins {
     kotlin("jvm") version "2.2.0"
     id("java-library")
+    id("maven-publish")
 }
 
 
@@ -19,7 +22,7 @@ dependencies {
 }
 
 
-
 tasks.test {
     useJUnitPlatform()
 }
+
