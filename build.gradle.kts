@@ -2,7 +2,7 @@
 import org.gradle.api.publish.maven.MavenPublication
 
 group = project.findProperty("group") as String? ?: "com.github.lucaslpmoura"
-version = project.findProperty("version") as String? ?: "0.1.0"
+version = "0.1.3.5"
 
 plugins {
     kotlin("jvm") version "2.2.0"
