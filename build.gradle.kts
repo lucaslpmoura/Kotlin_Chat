@@ -2,6 +2,7 @@
 import org.gradle.api.publish.maven.MavenPublication
 
 group = "com.github.lucaslpmoura"
+version = "0.1.3.1"
 
 plugins {
     kotlin("jvm") version "2.2.0"
