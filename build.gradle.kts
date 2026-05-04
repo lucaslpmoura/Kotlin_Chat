@@ -2,6 +2,7 @@
 
 plugins {
     kotlin("jvm") version "2.2.0"
+    id("java-library")
 }
 
 repositories {
