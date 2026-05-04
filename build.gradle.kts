@@ -1,8 +1,8 @@
 #!/usr/bin/env kotlin
 import org.gradle.api.publish.maven.MavenPublication
 
-group = project.findProperty("group") as String? ?: "com.github.lucaslpmoura"
-version = "0.1.3.5"
+group = "com.github.lucaslpmoura"
+version = "0.1.3.6"
 
 plugins {
     kotlin("jvm") version "2.2.0"
