@@ -45,18 +45,8 @@ class KotlinChatClient {
 
     public fun run() {
 
-        tcpConnectionScope.launch {
-            while (!isTCPConnected) {
-                try {
-                    socket = Socket(serverAddress, serverPort)
-                    isTCPConnected = true
-                } catch (e: IOException) {
-                    println("Failed to connect to the server: ${e.message}")
-                }
-            }
-            println("Connected to server at $serverAddress")
-        }
-
+        socket = Socket(serverAddress, serverPort)
+        isTCPConnected = true
 
         readScope.launch {
             while (true) {

@@ -10,7 +10,12 @@ suspend fun main() {
     val clients = listOf<KotlinChatClient>(KotlinChatClient(), KotlinChatClient(), KotlinChatClient(), KotlinChatClient())
 
     for (client in clients) {
-        client.run()
+        try{
+            client.run()
+        }catch (e: IOException){
+            println(e.message)
+        }
+
     }
 
     delay(1.seconds)
