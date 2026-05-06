@@ -407,7 +407,7 @@ class KotlinChatServer {
                 }catch(e: Exception){
                     println("Failed to read input from user ${user.id}: ${e.message} ")
                     readError = true
-                    deleteUserJob(user)
+                    removeUser(user)
                 }
             }
 
@@ -422,6 +422,7 @@ class KotlinChatServer {
                 userJobs[id]?.cancel()
                 userJobs.remove(id)
                 println("Stopping job for user ${user.id}.")
+
             }
         }
     }
