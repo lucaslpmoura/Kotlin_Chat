@@ -224,7 +224,6 @@ class KotlinChatClient {
 
     private fun processError(message: KotlinChatMessage) {
         lastError = message
-        throw Exception("Server returned error: ${parseDataFromServerMessage(message)["error"]}")
     }
 
 
