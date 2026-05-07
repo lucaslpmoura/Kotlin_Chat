@@ -5,6 +5,7 @@ import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -12,7 +13,55 @@ import kotlin.time.Duration.Companion.seconds
 class KotlinChatServerClientTest : FunSpec({
 
 
-    //context("starting session"){}
+    context("starting session"){
+        lateinit var client : KotlinChatClient
+        lateinit var server: KotlinChatServer
+
+        beforeEach{
+            println("[TEST] Creating variables...")
+            server = KotlinChatServer()
+            server.start()
+            server.run()
+            client = KotlinChatClient()
+            delay(100.milliseconds) // Giving time for server to start
+            client.run()
+        }
+
+        afterEach{
+            println("AFTER TEST")
+            client.disconnect()
+            delay(100.milliseconds)
+            server.stop()
+            delay(2.seconds)
+        }
+
+        test("connecting, disconnecting, connecting again"){
+            client.connect("LUCAS-1")
+            delay(100.milliseconds)
+            val originalID = client.id
+            delay(100.milliseconds)
+            client.disconnect()
+            delay(100.milliseconds)
+
+            client.run()
+            client.connect("LUCAS-2")
+            delay(100.milliseconds)
+//
+//            var i = 0
+//            while(!client.isConnected){
+//                delay(100.milliseconds)
+//                if(i++ >= 5){
+//                    throw Exception("Failed to connect to server after $i retries.")
+//                }
+//            }
+
+            println("Original id: $originalID")
+            println("Current id: ${client.id}")
+            client.id shouldNotBe null
+            client.id shouldNotBe originalID
+
+        }
+    }
     //context("ending session"){}
     context("session commands") {
 

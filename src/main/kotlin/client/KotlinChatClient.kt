@@ -40,15 +40,17 @@ class KotlinChatClient {
     var lastError: KotlinChatMessage? = null
     var lastText: KotlinChatMessage? = null
 
-    private val tcpConnectionScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private lateinit var readScope : CoroutineScope
 
     public fun run() {
-
+        println("Starting client...")
         socket = Socket(serverAddress, serverPort)
         isTCPConnected = true
 
+        readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         readScope.launch {
+            println("Starting read scope...")
             while (true) {
                 if (isTCPConnected) {
                     val message = readMessage()
@@ -58,6 +60,8 @@ class KotlinChatClient {
                 }
             }
         }
+
+        println("Client started.")
     }
 
     public fun connect(desiredName: String) {
@@ -120,7 +124,6 @@ class KotlinChatClient {
         val buffer = ByteArray(MAX_MESSAGE_SIZE)
         try{
             socket.inputStream.read(buffer)
-
         }catch (e: IOException){
             throw Exception("Failed to read from server: ${e.message}")
         }
@@ -129,6 +132,7 @@ class KotlinChatClient {
 
 
     private fun processMessage(message: KotlinChatMessage) {
+        println("Processing message of type ${message.type.name}")
         when(message.type) {
             Type.CONNECT -> processConnect(message)
 
@@ -165,10 +169,12 @@ class KotlinChatClient {
     }
 
     private fun processDisconnect() {
-        tcpConnectionScope.cancel()
         readScope.cancel()
         isConnected = false
         isTCPConnected = false
+
+        id = null
+        name = null
         if(!isTCPConnected) {
             println("Disconnected from server.")
         }else{
