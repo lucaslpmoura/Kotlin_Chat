@@ -36,6 +36,7 @@ class KotlinChatClient {
 
     var serverRooms: Map<String, String> = mapOf<String, String>()
     var currentRoomId: String? = null
+    var currentRoomName: String? = null
 
     var lastError: KotlinChatMessage? = null
     var lastText: KotlinChatMessage? = null
@@ -175,6 +176,8 @@ class KotlinChatClient {
 
         id = null
         name = null
+        currentRoomId = null
+        currentRoomName = null
         if(!isTCPConnected) {
             println("Disconnected from server.")
         }else{
@@ -193,6 +196,7 @@ class KotlinChatClient {
     private fun processJoinRoom(message: KotlinChatMessage) {
         try{
             currentRoomId = parseDataFromServerMessage(message)["id"]
+            currentRoomName = parseDataFromServerMessage(message)["name"]
         }catch (e: Exception){
             throw Exception("Error parsing JOIN_ROOM message: ${e.message}")
         }
@@ -236,11 +240,28 @@ class KotlinChatClient {
 
     fun parseDataFromServerMessage(message : KotlinChatMessage) : Map<String, String>{
         return when(message.type) {
-            Type.CONNECT, Type.JOIN_ROOM, Type.LEAVE_ROOM -> {
+            Type.CONNECT, Type.LEAVE_ROOM -> {
                 if(message.data.isEmpty()){
                     throw Exception("id not present.")
                 }
                 mapOf("id" to message.data)
+            }
+            Type.JOIN_ROOM -> {
+                if(message.data.isEmpty()){
+                    throw Exception("message data is empty.")
+                }
+
+                lateinit var roomId : String
+                lateinit var roomName : String
+
+                val splitData = message.data.split('|')
+                try{
+                    roomId = splitData[0]
+                    roomName = splitData[1]
+                }catch (e: IndexOutOfBoundsException){
+                    throw Exception("roomId or roomName is null.")
+                }
+                mapOf("id" to roomId, "name" to roomName)
             }
             Type.LIST_ROOMS -> {
                 val serverRooms = mutableMapOf<String, String>()

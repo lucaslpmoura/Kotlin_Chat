@@ -246,7 +246,7 @@ class KotlinChatServer {
             val room = mediator.getRoomById(roomId)
             mediator.addUserToRoom(user, room)
 
-            sendMessage(user, KotlinChatMessage.Type.JOIN_ROOM, mapOf("data" to roomId))
+            sendMessage(user, KotlinChatMessage.Type.JOIN_ROOM, mapOf("data" to "${roomId}|${room.name}"))
         }catch(e: Exception){
             println("Failed to add user $userId to room $roomId: ${e.message}")
             sendMessage(user, KotlinChatMessage.Type.ERROR, mapOf("data" to "Error joining room $roomId."))

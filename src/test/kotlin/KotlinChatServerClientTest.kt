@@ -131,10 +131,12 @@ class KotlinChatServerClientTest : FunSpec({
                 }
 
                 val roomId = client.serverRooms.keys.elementAt(0)
+                val roomName = client.serverRooms.values.elementAt(0)
                 client.joinRoom(roomId)
                 delay(100.milliseconds)
 
                 client.currentRoomId shouldBe roomId
+                client.currentRoomName shouldBe roomName
             }
         }
 
